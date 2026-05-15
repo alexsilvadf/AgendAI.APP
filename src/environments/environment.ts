@@ -1,4 +1,4 @@
 export const environment = {
-  production: false,
-  apiUrl: 'http://localhost:5137/api/v1'
+  production: true,
+  apiUrl: 'https://agendai-api.onrender.com/api/v1'
 };

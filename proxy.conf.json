@@ -1,7 +1,7 @@
 {
   "/api": {
-    "target": "http://localhost:5137",
-    "secure": false,
+    "target": "https://agendai-api.onrender.com",
+    "secure": true,
     "changeOrigin": true
   }
 }
