@@ -1,0 +1,71 @@
+:host {
+  display: contents;
+}
+
+.global-loader {
+  --ink: #0f172a;
+  --muted: #64748b;
+  --surface: #ffffff;
+  --teal-600: #0d9488;
+  --teal-700: #0f766e;
+
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(15, 23, 42, 0.28);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  animation: loader-fade-in 0.18s ease;
+  font-family: 'DM Sans', system-ui, sans-serif;
+}
+
+.global-loader__panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 1.5rem 2rem;
+  border-radius: 1rem;
+  background: var(--surface);
+  border: 1px solid #e2e8f0;
+  box-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.04),
+    0 24px 48px -12px rgba(15, 23, 42, 0.16);
+}
+
+.global-loader__spinner {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 50%;
+  border: 3px solid rgba(13, 148, 136, 0.18);
+  border-top-color: var(--teal-600);
+  animation: loader-spin 0.65s linear infinite;
+}
+
+.global-loader__text {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+@keyframes loader-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes loader-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}

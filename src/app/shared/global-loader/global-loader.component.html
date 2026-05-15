@@ -1,0 +1,14 @@
+@if (isLoading()) {
+  <div
+    class="global-loader"
+    role="status"
+    aria-live="polite"
+    aria-busy="true"
+    aria-label="Carregando"
+  >
+    <div class="global-loader__panel">
+      <div class="global-loader__spinner" aria-hidden="true"></div>
+      <p class="global-loader__text">Carregando…</p>
+    </div>
+  </div>
+}
