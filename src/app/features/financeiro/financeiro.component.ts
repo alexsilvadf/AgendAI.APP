@@ -1,7 +1,7 @@
 import { Component, computed, inject, signal, effect } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { FinanceiroService, type Lancamento, type TipoLancamento, type StatusLancamento, type CategoriaDespesa, CATEGORIAS_DESPESA } from '../../core/services/financeiro.service';
-import { AtendimentoService, FORMAS_PAGAMENTO, type FormaPagamento } from '../../core/services/atendimento.service';
+import { FORMAS_PAGAMENTO, type FormaPagamento } from '../../core/services/atendimento.service';
 import { localIsoDate } from '../agenda/agenda-mock.data';
 
 type AbaFinanceiro = 'caixa' | 'lancamentos' | 'formas' | 'relatorio';
@@ -14,8 +14,7 @@ type AbaFinanceiro = 'caixa' | 'lancamentos' | 'formas' | 'relatorio';
 })
 export class FinanceiroComponent {
   private readonly fb              = inject(FormBuilder);
-  private readonly finSvc          = inject(FinanceiroService);
-  private readonly atendimentoSvc  = inject(AtendimentoService);
+  private readonly finSvc = inject(FinanceiroService);
 
   readonly formasPagamento   = FORMAS_PAGAMENTO;
   readonly categoriasDespesa = CATEGORIAS_DESPESA;
@@ -23,11 +22,10 @@ export class FinanceiroComponent {
   // ─── Aba ativa ────────────────────────────────────────────────────────
   readonly abaAtiva = signal<AbaFinanceiro>('caixa');
 
-  // ─── Sincroniza atendimentos pagos como receitas ───────────────────────
   constructor() {
-    effect(() => {
-      this.finSvc.sincronizarAtendimentos(this.atendimentoSvc.atendimentos());
-    });
+    const hoje = localIsoDate(new Date());
+    const inicioMes = hoje.slice(0, 7) + '-01';
+    this.finSvc.carregar({ dataInicio: inicioMes, dataFim: hoje });
   }
 
   // ─── Caixa diário ─────────────────────────────────────────────────────
@@ -105,9 +103,8 @@ export class FinanceiroComponent {
       this.finSvc.criar({
         ...dados,
         status: 'pendente',
-        formaPagamento: dados.formaPagamento as FormaPagamento | undefined || undefined,
-        criadoEm: localIsoDate(new Date()),
-      } as Omit<Lancamento, 'id' | 'criadoEm'>);
+        formaPagamento: dados.formaPagamento as FormaPagamento | undefined || undefined
+      });
       this.mensagem.set({ tipo: 'sucesso', texto: 'Lançamento criado com sucesso.' });
     }
     this.cancelarFormLancamento();

@@ -1,21 +1,17 @@
-import { Component, inject, signal, computed } from '@angular/core';
+import { Component, inject, signal, computed, OnInit } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-import { buildMockSchedules, PROFESSIONALS, localIsoDate } from '../agenda/agenda-mock.data';
+import { localIsoDate } from '../agenda/agenda-mock.data';
 import type { Professional } from '../agenda/agenda.types';
-import { PacienteService } from '../../core/services/paciente.service';
+import { ApiAgendaService } from '../../core/services/api-agenda.service';
+import { ApiAgendamentoService } from '../../core/services/api-agendamento.service';
+import { ApiCatalogoService } from '../../core/services/api-catalogo.service';
 import {
-  PROCEDIMENTOS_MOCK,
   opcoesHorarioClinica,
   type ProcedimentoOption
 } from './agendar-consulta.data';
 
-interface AgendamentoRegistrado {
-  profissionalId: string;
-  pacienteId: string;
-  data: string;
-  hora: string;
-}
+import type { DaySchedule } from '../agenda/agenda.types';
 
 @Component({
   selector: 'app-agendar-consulta',
@@ -23,25 +19,22 @@ interface AgendamentoRegistrado {
   templateUrl: './agendar-consulta.component.html',
   styleUrl: './agendar-consulta.component.scss'
 })
-export class AgendarConsultaComponent {
-  private readonly fb      = inject(FormBuilder);
-  private readonly router  = inject(Router);
-  private readonly route   = inject(ActivatedRoute);
-  private readonly pacienteService = inject(PacienteService);
+export class AgendarConsultaComponent implements OnInit {
+  private readonly fb = inject(FormBuilder);
+  private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
+  private readonly apiAgenda = inject(ApiAgendaService);
+  private readonly apiAgendamento = inject(ApiAgendamentoService);
+  private readonly apiCatalogo = inject(ApiCatalogoService);
 
-  readonly professionals: Professional[] = PROFESSIONALS;
-  readonly pacientes = computed(() =>
-    this.pacienteService.ativos().map((p) => ({ id: p.id, nome: p.nome }))
-  );
-  readonly procedimentos: ProcedimentoOption[] = PROCEDIMENTOS_MOCK;
+  readonly professionals = signal<Professional[]>([]);
+  readonly pacientes = signal<{ id: string; nome: string }[]>([]);
+  readonly procedimentos = signal<ProcedimentoOption[]>([]);
   readonly horarios: string[] = opcoesHorarioClinica();
-  readonly agendamentos = signal<AgendamentoRegistrado[]>([
-    { profissionalId: 'p1', pacienteId: 'c1', data: localIsoDate(new Date()), hora: '09:00' },
-    { profissionalId: 'p2', pacienteId: 'c2', data: localIsoDate(new Date()), hora: '10:30' }
-  ]);
 
   readonly salvoComSucesso = signal(false);
   readonly erroConflito = signal<string | null>(null);
+  readonly gradeDia = signal<DaySchedule | null>(null);
 
   readonly form = this.fb.nonNullable.group({
     profissionalId: ['', [Validators.required]],
@@ -52,7 +45,18 @@ export class AgendarConsultaComponent {
     valor: [0, [Validators.required, Validators.min(0.01)]]
   });
 
-  constructor() {
+  ngOnInit(): void {
+    this.apiAgenda.listarProfissionais().subscribe({
+      next: (items) => this.professionals.set(items)
+    });
+    this.apiCatalogo.listarPacientes().subscribe({
+      next: (items) => this.pacientes.set(items.map((p) => ({ id: p.id, nome: p.nome })))
+    });
+    this.apiCatalogo.listarProcedimentosAtivos().subscribe({
+      next: (items) =>
+        this.procedimentos.set(items.map((p) => ({ id: p.id, nome: p.nome, valor: p.valor })))
+    });
+
     const params = this.route.snapshot.queryParamMap;
     const profissionalId = params.get('profissionalId') ?? '';
     const data = params.get('data') ?? localIsoDate(new Date());
@@ -66,7 +70,7 @@ export class AgendarConsultaComponent {
 
   aoEscolherProcedimento(): void {
     const id = this.form.controls.procedimentoId.value;
-    const proc = this.procedimentos.find((p) => p.id === id);
+    const proc = this.procedimentos().find((p) => p.id === id);
     if (proc) {
       this.form.patchValue({ valor: proc.valor }, { emitEvent: false });
     }
@@ -85,24 +89,23 @@ export class AgendarConsultaComponent {
     }
 
     const dados = this.form.getRawValue();
-    const conflito = this.validarConflito(dados.profissionalId, dados.pacienteId, dados.data, dados.hora);
-    if (conflito) {
-      this.erroConflito.set(conflito);
-      return;
-    }
 
-    this.agendamentos.update((items) => [
-      ...items,
-      {
+    this.apiAgendamento
+      .criar({
         profissionalId: dados.profissionalId,
         pacienteId: dados.pacienteId,
+        procedimentoId: dados.procedimentoId,
         data: dados.data,
-        hora: dados.hora
-      }
-    ]);
-    // TODO: POST para API de agendamentos
-    console.warn('Agendamento:', dados);
-    this.salvoComSucesso.set(true);
+        hora: dados.hora,
+        valor: dados.valor
+      })
+      .subscribe({
+        next: () => this.salvoComSucesso.set(true),
+        error: (err) => {
+          const detail = err?.error?.detail ?? err?.error?.title;
+          this.erroConflito.set(detail ?? 'Não foi possível criar o agendamento.');
+        }
+      });
   }
 
   limpar(): void {
@@ -118,33 +121,21 @@ export class AgendarConsultaComponent {
     });
   }
 
-  private validarConflito(
-    profissionalId: string,
-    pacienteId: string,
-    data: string,
-    hora: string
-  ): string | null {
-    const itens = this.agendamentos();
-    const conflitoProfissional = itens.some(
-      (item) => item.data === data && item.hora === hora && item.profissionalId === profissionalId
-    );
-    if (conflitoProfissional) {
-      return 'Este profissional já possui um agendamento na mesma data e horário.';
-    }
-
-    const conflitoPaciente = itens.some(
-      (item) => item.data === data && item.hora === hora && item.pacienteId === pacienteId
-    );
-    if (conflitoPaciente) {
-      return 'Este paciente já possui um agendamento na mesma data e horário.';
-    }
-
-    return null;
-  }
-
   onContextoAgendaChange(): void {
     this.salvoComSucesso.set(false);
     this.erroConflito.set(null);
+
+    const { profissionalId, data } = this.form.getRawValue();
+    if (!profissionalId || !data) {
+      this.gradeDia.set(null);
+      return;
+    }
+
+    this.apiAgenda.obterGrade(data, profissionalId).subscribe({
+      next: (rows) => this.gradeDia.set(rows[0] ?? null),
+      error: () => this.gradeDia.set(null)
+    });
+
     const horaSelecionada = this.form.controls.hora.value;
     if (horaSelecionada && this.isHorarioIndisponivel(horaSelecionada)) {
       this.form.patchValue({ hora: '' }, { emitEvent: false });
@@ -152,44 +143,12 @@ export class AgendarConsultaComponent {
   }
 
   isHorarioIndisponivel(hora: string): boolean {
-    const { profissionalId, pacienteId, data } = this.form.getRawValue();
-    if (!profissionalId || !data) {
-      return true;
-    }
-
-    const bloqueados = this.horariosBloqueadosProfissional(profissionalId, data);
-    if (bloqueados.has(hora)) {
-      return true;
-    }
-
-    if (!pacienteId) {
+    const row = this.gradeDia();
+    if (!row) {
       return false;
     }
-    return this.agendamentos().some(
-      (item) => item.data === data && item.hora === hora && item.pacienteId === pacienteId
-    );
-  }
 
-  private horariosBloqueadosProfissional(profissionalId: string, data: string): Set<string> {
-    const bloqueados = new Set<string>();
-
-    for (const item of this.agendamentos()) {
-      if (item.data === data && item.profissionalId === profissionalId) {
-        bloqueados.add(item.hora);
-      }
-    }
-
-    for (const row of buildMockSchedules(data)) {
-      if (row.professionalId !== profissionalId || row.date !== data) {
-        continue;
-      }
-      for (const slot of row.slots) {
-        if (slot.status !== 'livre') {
-          bloqueados.add(slot.start);
-        }
-      }
-    }
-
-    return bloqueados;
+    const slot = row.slots.find((s) => s.start === hora);
+    return !slot || slot.status !== 'livre';
   }
 }

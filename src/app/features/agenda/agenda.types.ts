@@ -12,6 +12,9 @@ export interface AgendaSlot {
   status: SlotStatus;
   patientName?: string;
   detail?: string;
+  pendentePagamento?: boolean;
+  agendamentoId?: string;
+  atendimentoId?: string;
 }
 
 export interface DaySchedule {

@@ -33,7 +33,7 @@
         <span class="filter-label">Profissional</span>
         <select [value]="selectedProfessionalId()" (change)="onProfessionalChange($any($event.target).value)">
           <option value="all">Todos os profissionais</option>
-          @for (p of professionals; track p.id) {
+          @for (p of professionals(); track p.id) {
             <option [value]="p.id">{{ p.name }} — {{ p.specialty }}</option>
           }
         </select>

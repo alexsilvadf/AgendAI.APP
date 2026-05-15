@@ -1,4 +1,10 @@
-import { Injectable, signal, computed, NgZone, inject, OnDestroy } from '@angular/core';
+import { Injectable, computed, inject, signal } from '@angular/core';
+import { tap } from 'rxjs';
+import {
+  ApiAtendimentoService,
+  type AtendimentoApi,
+  type CriarAtendimentoApiRequest
+} from './api-atendimento.service';
 
 export type FormaPagamento =
   | 'dinheiro'
@@ -9,111 +15,103 @@ export type FormaPagamento =
   | 'convenio';
 
 export const FORMAS_PAGAMENTO: { value: FormaPagamento; label: string }[] = [
-  { value: 'dinheiro',                 label: 'Dinheiro' },
-  { value: 'pix',                      label: 'PIX' },
-  { value: 'cartao_debito',            label: 'Cartão de débito' },
-  { value: 'cartao_credito',           label: 'Cartão de crédito (à vista)' },
+  { value: 'dinheiro', label: 'Dinheiro' },
+  { value: 'pix', label: 'PIX' },
+  { value: 'cartao_debito', label: 'Cartão de débito' },
+  { value: 'cartao_credito', label: 'Cartão de crédito (à vista)' },
   { value: 'cartao_credito_parcelado', label: 'Cartão de crédito (parcelado)' },
-  { value: 'convenio',                 label: 'Convênio / Plano de saúde' },
+  { value: 'convenio', label: 'Convênio / Plano de saúde' }
 ];
 
 export interface AtendimentoConcluido {
-  /** Chave única: professionalId + date + hora */
-  id:             string;
+  id: string;
   professionalId: string;
-  profissional:   string;
-  paciente:       string;
-  procedimento:   string;
-  data:           string;   // ISO date
-  hora:           string;
-  valor:          number;
-  observacoes:    string;
-  dentes:         string;
-  retorno:        boolean;
-  /** Preenchido pela recepcionista ao registrar o pagamento */
-  pago:           boolean;
+  profissional: string;
+  paciente: string;
+  procedimento: string;
+  data: string;
+  hora: string;
+  valor: number;
+  observacoes: string;
+  dentes: string;
+  retorno: boolean;
+  pago: boolean;
   formaPagamento?: FormaPagamento;
-  parcelas?:      number;
+  parcelas?: number;
+  agendamentoId?: string;
 }
 
-const STORAGE_KEY = 'agendai_atendimentos_concluidos';
-
 @Injectable({ providedIn: 'root' })
-export class AtendimentoService implements OnDestroy {
-  private readonly zone = inject(NgZone);
-  private readonly _atendimentos = signal<AtendimentoConcluido[]>(this.load());
+export class AtendimentoService {
+  private readonly api = inject(ApiAtendimentoService);
+  private readonly _atendimentos = signal<AtendimentoConcluido[]>([]);
 
-  readonly atendimentos   = this._atendimentos.asReadonly();
-  readonly pendentes      = computed(() => this._atendimentos().filter((a) => !a.pago));
+  readonly atendimentos = this._atendimentos.asReadonly();
+  readonly pendentes = computed(() => this._atendimentos().filter((a) => !a.pago));
   readonly totalPendentes = computed(() => this.pendentes().length);
 
-  private pollingId: ReturnType<typeof setInterval> | null = null;
+  static slotKey(professionalId: string, data: string, hora: string): string {
+    return `${professionalId}_${data}_${hora}`;
+  }
 
-  constructor() {
-    // Evento storage: funciona entre abas do MESMO browser
-    window.addEventListener('storage', (event: StorageEvent) => {
-      if (event.key !== STORAGE_KEY) return;
-      this.zone.run(() => this._atendimentos.set(this.load()));
+  static fromApi(api: AtendimentoApi): AtendimentoConcluido {
+    return {
+      id: api.id,
+      professionalId: api.professionalId,
+      profissional: api.profissional,
+      paciente: api.paciente,
+      procedimento: api.procedimento,
+      data: api.data,
+      hora: api.hora,
+      valor: api.valor,
+      observacoes: api.observacoes,
+      dentes: api.dentes,
+      retorno: api.retorno,
+      pago: api.pago,
+      formaPagamento: api.formaPagamento,
+      parcelas: api.parcelas,
+      agendamentoId: api.agendamentoId
+    };
+  }
+
+  carregar(filtros?: { data?: string; profissionalId?: string; pago?: boolean }): void {
+    this.api.listar(filtros).subscribe({
+      next: (items) => this._atendimentos.set(items.map(AtendimentoService.fromApi))
     });
+  }
 
-    // Polling a cada 1s: detecta mudanças no localStorage.
-    // Funciona entre abas do mesmo browser (junto com o storage event).
-    // NOTA: localStorage é isolado por browser — Chrome e Edge não compartilham.
-    // Para testes entre browsers diferentes, use abas do mesmo browser.
-    this.zone.runOutsideAngular(() => {
-      this.pollingId = setInterval(() => {
-        const fresh = this.load();
-        const atual = this._atendimentos();
-        if (JSON.stringify(fresh) !== JSON.stringify(atual)) {
-          this.zone.run(() => this._atendimentos.set(fresh));
-        }
-      }, 1000);
+  registrar(dados: CriarAtendimentoApiRequest): void {
+    this.api.criar(dados).subscribe({
+      next: (criado) => {
+        const item = AtendimentoService.fromApi(criado);
+        this._atendimentos.update((list) => [...list.filter((a) => a.id !== item.id), item]);
+      }
     });
-  }
-
-  ngOnDestroy(): void {
-    if (this.pollingId !== null) {
-      clearInterval(this.pollingId);
-    }
-  }
-
-  // ─── Persistência ──────────────────────────────────────────────────────
-  private load(): AtendimentoConcluido[] {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (!raw) return [];
-      return JSON.parse(raw) as AtendimentoConcluido[];
-    } catch {
-      return [];
-    }
-  }
-
-  private persist(): void {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(this._atendimentos()));
-  }
-
-  // ─── Ações ────────────────────────────────────────────────────────────
-  registrar(dados: Omit<AtendimentoConcluido, 'id' | 'pago'>): void {
-    const id = `${dados.professionalId}_${dados.data}_${dados.hora}`;
-    if (this._atendimentos().some((a) => a.id === id)) return;
-    this._atendimentos.update((list) => [...list, { ...dados, id, pago: false }]);
-    this.persist();
   }
 
   registrarPagamento(id: string, formaPagamento: FormaPagamento, parcelas?: number): void {
-    this._atendimentos.update((list) =>
-      list.map((a) => a.id === id ? { ...a, pago: true, formaPagamento, parcelas } : a)
-    );
-    this.persist();
+    this.api
+      .registrarPagamento(id, formaPagamento, parcelas)
+      .pipe(
+        tap((atualizado) => {
+          const item = AtendimentoService.fromApi(atualizado);
+          this._atendimentos.update((list) =>
+            list.map((a) => (a.id === item.id ? item : a))
+          );
+        })
+      )
+      .subscribe();
   }
 
   buscarPorSlot(professionalId: string, data: string, hora: string): AtendimentoConcluido | undefined {
-    const id = `${professionalId}_${data}_${hora}`;
-    return this._atendimentos().find((a) => a.id === id);
+    const key = AtendimentoService.slotKey(professionalId, data, hora);
+    return this._atendimentos().find(
+      (a) => AtendimentoService.slotKey(a.professionalId, a.data, a.hora) === key
+    );
   }
 
-  /** Força releitura do localStorage — útil ao navegar para a agenda */
-  sincronizar(): void {
-    this._atendimentos.set(this.load());
+  /** Recarrega atendimentos da API (substitui sincronizar do localStorage). */
+  sincronizar(filtros?: { data?: string; profissionalId?: string }): void {
+    this.carregar(filtros);
   }
 }

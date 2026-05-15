@@ -5,16 +5,11 @@ import { AuthService } from '../../core/services/auth.service';
 import { PacienteService } from '../../core/services/paciente.service';
 import { AtendimentoService } from '../../core/services/atendimento.service';
 import type { AtendimentoConcluido } from '../../core/services/atendimento.service';
-import {
-  PROFESSIONALS,
-  USUARIO_PROFESSIONAL_MAP,
-  buildMockSchedules,
-  localIsoDate,
-  addDaysIso
-} from '../agenda/agenda-mock.data';
+import { ApiAgendaService } from '../../core/services/api-agenda.service';
+import { ApiCatalogoService, type ProcedimentoApi } from '../../core/services/api-catalogo.service';
+import { localIsoDate, addDaysIso } from '../agenda/agenda-mock.data';
 import type { AgendaSlot, DaySchedule, Professional } from '../agenda/agenda.types';
 import type { Paciente } from '../../core/models/paciente.model';
-import { PROCEDIMENTOS_MOCK } from '../agendamento/agendar-consulta.data';
 
 export type EtapaAtendimento = 'agenda' | 'ficha' | 'procedimento' | 'finalizado';
 
@@ -36,6 +31,8 @@ export class AtendimentoComponent {
   private readonly auth            = inject(AuthService);
   private readonly pacienteService = inject(PacienteService);
   private readonly atendimentoSvc  = inject(AtendimentoService);
+  private readonly apiAgenda       = inject(ApiAgendaService);
+  private readonly apiCatalogo     = inject(ApiCatalogoService);
 
   // ─── Estado do fluxo ──────────────────────────────────────────────────
   readonly etapa = signal<EtapaAtendimento>('agenda');
@@ -50,22 +47,28 @@ export class AtendimentoComponent {
    */
   readonly professionalIdFixo = computed<string | null>(() => {
     if (!this.isDentista()) return null;
-    return USUARIO_PROFESSIONAL_MAP[this.usuarioLogado()] ?? null;
+    return this.auth.currentProfessionalId();
   });
 
-  // ─── Etapa 1 — Agenda ─────────────────────────────────────────────────
-  readonly professionals: Professional[] = PROFESSIONALS;
+  readonly professionals = signal<Professional[]>([]);
+  readonly procedimentos = signal<ProcedimentoApi[]>([]);
+
   readonly selectedDate           = signal(localIsoDate(new Date()));
   readonly selectedProfId         = signal<string>('all');
   readonly agendamentoSelecionado = signal<AgendamentoSelecionado | null>(null);
 
-  private readonly allSchedules = signal(buildMockSchedules(localIsoDate(new Date())));
+  private readonly allSchedules = signal<DaySchedule[]>([]);
 
-  // Mapa de todos os atendimentos registrados (para bloquear slots já atendidos)
-  readonly atendimentosMap = computed(() => {
+  constructor() {
+    this.carregarProfissionais();
+    this.carregarProcedimentos();
+    this.carregarGrade();
+  }
+
+  readonly atendimentosPorSlot = computed(() => {
     const map = new Map<string, AtendimentoConcluido>();
     for (const a of this.atendimentoSvc.atendimentos()) {
-      map.set(a.id, a);
+      map.set(AtendimentoService.slotKey(a.professionalId, a.data, a.hora), a);
     }
     return map;
   });
@@ -73,13 +76,13 @@ export class AtendimentoComponent {
   readonly visibleSchedules = computed(() => {
     const date = this.selectedDate();
     const pid  = this.professionalIdFixo() ?? this.selectedProfId();
-    const atendimentos = this.atendimentosMap();
+    const atendimentos = this.atendimentosPorSlot();
     return this.allSchedules()
       .filter((row) => row.date === date && (pid === 'all' || row.professionalId === pid))
       .map((row) => ({
         ...row,
         slots: row.slots.map((slot) => {
-          const key = `${row.professionalId}_${row.date}_${slot.start}`;
+          const key = AtendimentoService.slotKey(row.professionalId, row.date, slot.start);
           const atendimento = atendimentos.get(key) ?? null;
           return { ...slot, atendimento };
         })
@@ -111,9 +114,6 @@ export class AtendimentoComponent {
     );
   });
 
-  // ─── Etapa 3 — Procedimento ───────────────────────────────────────────
-  readonly procedimentosMock = PROCEDIMENTOS_MOCK;
-
   readonly form = this.fb.nonNullable.group({
     procedimentoId: ['',  [Validators.required]],
     valor:          [0,   [Validators.required, Validators.min(0.01)]],
@@ -137,7 +137,33 @@ export class AtendimentoComponent {
 
   // ─── Helpers ──────────────────────────────────────────────────────────
   profById(id: string): Professional | undefined {
-    return this.professionals.find((p) => p.id === id);
+    return this.professionals().find((p) => p.id === id);
+  }
+
+  private carregarProfissionais(): void {
+    this.apiAgenda.listarProfissionais().subscribe({
+      next: (items) => {
+        this.professionals.set(items);
+        const profId = this.auth.currentProfessionalId();
+        if (profId) this.selectedProfId.set(profId);
+      }
+    });
+  }
+
+  private carregarProcedimentos(): void {
+    this.apiCatalogo.listarProcedimentosAtivos().subscribe({
+      next: (items) => this.procedimentos.set(items)
+    });
+  }
+
+  private carregarGrade(): void {
+    const date = this.selectedDate();
+    const pid = this.professionalIdFixo() ?? this.selectedProfId();
+    const profissionalId = pid === 'all' ? undefined : pid;
+    this.apiAgenda.obterGrade(date, profissionalId).subscribe({
+      next: (rows) => this.allSchedules.set(rows)
+    });
+    this.atendimentoSvc.sincronizar({ data: date, profissionalId });
   }
 
   formatDisplayDate(iso: string): string {
@@ -166,7 +192,7 @@ export class AtendimentoComponent {
   }
 
   nomeProcedimento(id: string): string {
-    return this.procedimentosMock.find((p) => p.id === id)?.nome ?? id;
+    return this.procedimentos().find((p) => p.id === id)?.nome ?? id;
   }
 
   sim(v: boolean): string { return v ? 'Sim' : 'Não'; }
@@ -174,7 +200,7 @@ export class AtendimentoComponent {
   // ─── Etapa 1: ações da agenda ─────────────────────────────────────────
   onDateChange(value: string): void {
     this.selectedDate.set(value);
-    this.allSchedules.set(buildMockSchedules(value));
+    this.carregarGrade();
   }
 
   shiftDate(delta: number): void {
@@ -203,7 +229,7 @@ export class AtendimentoComponent {
   // ─── Etapa 3: ações do procedimento ──────────────────────────────────
   aoEscolherProcedimento(): void {
     const id   = this.form.controls.procedimentoId.value;
-    const proc = this.procedimentosMock.find((p) => p.id === id);
+    const proc = this.procedimentos().find((p) => p.id === id);
     if (proc) this.form.patchValue({ valor: proc.valor }, { emitEvent: false });
   }
 
@@ -216,30 +242,20 @@ export class AtendimentoComponent {
     const ag      = this.agendamentoSelecionado()!;
     const paciente = this.pacienteSelecionado()!;
     const dados   = this.form.getRawValue();
-    const proc    = this.procedimentosMock.find((p) => p.id === dados.procedimentoId);
-    const prof    = this.profById(ag.professionalId);
-    const hoje    = localIsoDate(new Date());
+    const proc = this.procedimentos().find((p) => p.id === dados.procedimentoId);
+    const prof = this.profById(ag.professionalId);
 
-    this.pacienteService.adicionarHistorico(paciente.id, {
-      data:         hoje,
-      procedimento: proc?.nome ?? dados.procedimentoId,
-      profissional: prof?.name ?? this.usuarioLogado(),
-      observacoes:  dados.observacoes,
-      valor:        dados.valor
-    });
-
-    // Publica no AtendimentoService para notificação na agenda
     this.atendimentoSvc.registrar({
-      professionalId: ag.professionalId,
-      profissional:   prof?.name ?? this.usuarioLogado(),
-      paciente:       paciente.nome,
-      procedimento:   proc?.nome ?? dados.procedimentoId,
-      data:           ag.date,
-      hora:           ag.slot.start,
-      valor:          dados.valor,
-      observacoes:    dados.observacoes,
-      dentes:         dados.dentes,
-      retorno:        dados.retorno
+      profissionalId: ag.professionalId,
+      pacienteId: paciente.id,
+      procedimentoId: dados.procedimentoId,
+      data: ag.date,
+      hora: ag.slot.start,
+      valor: dados.valor,
+      observacoes: dados.observacoes,
+      dentes: dados.dentes,
+      retorno: dados.retorno,
+      agendamentoId: ag.slot.agendamentoId
     });
 
     this.atendimentoFinalizado.set({
@@ -270,6 +286,7 @@ export class AtendimentoComponent {
     this.pacienteSelecionado.set(null);
     this.atendimentoFinalizado.set(null);
     this.form.reset({ procedimentoId: '', valor: 0, observacoes: '', dentes: '', retorno: false });
+    this.carregarGrade();
   }
 
   irParaAgenda(): void {

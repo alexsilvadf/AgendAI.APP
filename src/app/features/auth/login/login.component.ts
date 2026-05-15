@@ -1,18 +1,8 @@
+import { HttpErrorResponse } from '@angular/common/http';
 import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
-import { AuthService } from '../../../core/services/auth.service';
-import type { UserRole } from '../../../core/models/user.model';
-
-// ─── Credenciais fixas (substituir por API futuramente) ───────────────────
-const CREDENCIAIS: Record<string, { senha: string; role: UserRole }> = {
-  'admin':       { senha: 'admin123', role: 'administrador' },
-  'ana.martins': { senha: 'senha123', role: 'dentista'      },
-  'bruno.costa': { senha: 'senha123', role: 'dentista'      },
-  'carla':       { senha: 'senha123', role: 'recepcionista' },
-  'carla.dias':  { senha: 'senha123', role: 'dentista'      },
-  'joao':        { senha: 'senha123', role: 'recepcionista' },
-};
+import { ApiAuthService } from '../../../core/services/api-auth.service';
 
 @Component({
   selector: 'app-login',
@@ -23,7 +13,7 @@ const CREDENCIAIS: Record<string, { senha: string; role: UserRole }> = {
 export class LoginComponent {
   private readonly fb   = inject(FormBuilder);
   private readonly router = inject(Router);
-  private readonly auth   = inject(AuthService);
+  private readonly apiAuth = inject(ApiAuthService);
 
   readonly erroLogin = signal<string | null>(null);
 
@@ -40,17 +30,24 @@ export class LoginComponent {
     }
 
     const { usuario, senha } = this.form.getRawValue();
-    const credencial = CREDENCIAIS[usuario];
 
-    if (!credencial || credencial.senha !== senha) {
-      this.erroLogin.set('Usuário ou senha inválidos. Verifique seus dados e tente novamente.');
-      return;
-    }
-
-    this.auth.login(usuario, credencial.role);
-    // Dentista vai direto para atendimento; demais roles para a agenda
-    const destino = credencial.role === 'dentista' ? '/atendimento' : '/agenda';
-    void this.router.navigate([destino]);
+    this.apiAuth.login(usuario, senha).subscribe({
+      next: (res) => {
+        const destino = res.role === 'dentista' ? '/atendimento' : '/agenda';
+        void this.router.navigate([destino]);
+      },
+      error: (err: HttpErrorResponse) => {
+        if (err.status === 0) {
+          this.erroLogin.set(
+            'Não foi possível conectar à API. Confirme se o backend está rodando na porta 5137 e reinicie o frontend com npm start.'
+          );
+        } else if (err.status === 401) {
+          this.erroLogin.set('Usuário ou senha inválidos. Verifique seus dados e tente novamente.');
+        } else {
+          this.erroLogin.set(`Erro ao autenticar (${err.status}). Tente novamente em instantes.`);
+        }
+      }
+    });
   }
 
   recuperarSenha(): void {

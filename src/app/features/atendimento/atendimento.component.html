@@ -59,7 +59,7 @@
               <span class="filter-label">Profissional</span>
               <select [value]="selectedProfId()" (change)="selectedProfId.set($any($event.target).value)">
                 <option value="all">Todos os profissionais</option>
-                @for (p of professionals; track p.id) {
+                @for (p of professionals(); track p.id) {
                   <option [value]="p.id">{{ p.name }} — {{ p.specialty }}</option>
                 }
               </select>
@@ -314,7 +314,7 @@
                 [attr.aria-invalid]="form.controls.procedimentoId.invalid && form.controls.procedimentoId.touched"
               >
                 <option value="" disabled>Selecione o procedimento</option>
-                @for (pr of procedimentosMock; track pr.id) {
+                @for (pr of procedimentos(); track pr.id) {
                   <option [value]="pr.id">{{ pr.nome }}</option>
                 }
               </select>

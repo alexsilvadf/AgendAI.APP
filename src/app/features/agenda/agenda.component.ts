@@ -1,12 +1,10 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
-import {
-  addDaysIso,
-  buildMockSchedules,
-  localIsoDate,
-  PROFESSIONALS
-} from './agenda-mock.data';
+import { addDaysIso, localIsoDate } from './agenda-mock.data';
+import { ApiAgendaService } from '../../core/services/api-agenda.service';
+import { ApiAgendamentoService } from '../../core/services/api-agendamento.service';
+import { AuthService } from '../../core/services/auth.service';
 import type { AgendaSlot, Professional } from './agenda.types';
 import {
   AtendimentoService,
@@ -32,9 +30,12 @@ export class AgendaComponent {
   private readonly router         = inject(Router);
   private readonly fb             = inject(FormBuilder);
   private readonly atendimentoSvc = inject(AtendimentoService);
-  private readonly rbac           = inject(RbacService);
+  private readonly rbac = inject(RbacService);
+  private readonly apiAgenda = inject(ApiAgendaService);
+  private readonly apiAgendamento = inject(ApiAgendamentoService);
+  private readonly auth = inject(AuthService);
 
-  readonly professionals: Professional[] = PROFESSIONALS;
+  readonly professionals = signal<Professional[]>([]);
   readonly formasPagamento = FORMAS_PAGAMENTO;
 
   // ─── Permissões ───────────────────────────────────────────────────────
@@ -47,12 +48,13 @@ export class AgendaComponent {
   readonly sincronizando     = signal(false);
 
   constructor() {
-    this.atendimentoSvc.sincronizar();
+    this.carregarProfissionais();
+    this.carregarGrade();
   }
 
   sincronizar(): void {
     this.sincronizando.set(true);
-    this.atendimentoSvc.sincronizar();
+    this.carregarGrade();
     this.ultimaAtualizacao.set(new Date());
     setTimeout(() => this.sincronizando.set(false), 800);
   }
@@ -67,7 +69,7 @@ export class AgendaComponent {
   readonly agendamentoSelecionado = signal<AgendamentoSelecionado | null>(null);
   readonly novoHorario            = signal('');
 
-  private readonly allSchedules = signal(buildMockSchedules(localIsoDate(new Date())));
+  private readonly allSchedules = signal<import('./agenda.types').DaySchedule[]>([]);
 
   readonly visibleSchedules = computed(() => {
     const date = this.selectedDate();
@@ -149,7 +151,31 @@ export class AgendaComponent {
 
   // ─── Helpers ──────────────────────────────────────────────────────────
   profById(id: string): Professional | undefined {
-    return this.professionals.find((p) => p.id === id);
+    return this.professionals().find((p) => p.id === id);
+  }
+
+  private carregarProfissionais(): void {
+    this.apiAgenda.listarProfissionais().subscribe({
+      next: (items) => {
+        this.professionals.set(items);
+        const profId = this.auth.currentProfessionalId();
+        if (profId) {
+          this.selectedProfessionalId.set(profId);
+        }
+      }
+    });
+  }
+
+  private carregarGrade(): void {
+    const date = this.selectedDate();
+    const pid = this.selectedProfessionalId();
+    const profissionalId = pid === 'all' ? undefined : pid;
+
+    this.apiAgenda.obterGrade(date, profissionalId).subscribe({
+      next: (rows) => this.allSchedules.set(rows)
+    });
+
+    this.atendimentoSvc.sincronizar({ data: date, profissionalId });
   }
 
   formatarMoeda(v: number): string {
@@ -165,11 +191,12 @@ export class AgendaComponent {
 
   onDateChange(value: string): void {
     this.selectedDate.set(value);
-    this.allSchedules.set(buildMockSchedules(value));
+    this.carregarGrade();
   }
 
   onProfessionalChange(value: string): void {
     this.selectedProfessionalId.set(value);
+    this.carregarGrade();
   }
 
   shiftDate(delta: number): void {
@@ -206,48 +233,29 @@ export class AgendaComponent {
 
   cancelarConsulta(): void {
     const selected = this.agendamentoSelecionado();
-    if (!selected) return;
-    this.allSchedules.update((rows) =>
-      rows.map((row) => {
-        if (row.professionalId !== selected.professionalId || row.date !== selected.date) return row;
-        return {
-          ...row,
-          slots: row.slots.map((slot) =>
-            slot.start === selected.start && slot.status === 'ocupado'
-              ? { ...slot, status: 'livre' as const, patientName: undefined, detail: undefined }
-              : slot
-          )
-        };
-      })
-    );
-    this.fecharModalAgendamento();
+    const slot = this.detalheAgendamentoSelecionado();
+    if (!selected || !slot?.agendamentoId) return;
+
+    this.apiAgendamento.cancelar(slot.agendamentoId).subscribe({
+      next: () => {
+        this.carregarGrade();
+        this.fecharModalAgendamento();
+      }
+    });
   }
 
   remarcarConsulta(): void {
-    const selected    = this.agendamentoSelecionado();
-    const novoInicio  = this.novoHorario();
-    if (!selected || !novoInicio) return;
-    const row         = this.findRow(selected.professionalId, selected.date);
-    const slotAtual   = row?.slots.find((s) => s.start === selected.start && s.status === 'ocupado');
-    const slotDestino = row?.slots.find((s) => s.start === novoInicio);
-    if (!slotAtual || !slotDestino || slotDestino.status !== 'livre') return;
+    const selected = this.agendamentoSelecionado();
+    const novoInicio = this.novoHorario();
+    const slot = this.detalheAgendamentoSelecionado();
+    if (!selected || !novoInicio || !slot?.agendamentoId) return;
 
-    this.allSchedules.update((rows) =>
-      rows.map((item) => {
-        if (item.professionalId !== selected.professionalId || item.date !== selected.date) return item;
-        return {
-          ...item,
-          slots: item.slots.map((slot) => {
-            if (slot.start === selected.start)
-              return { ...slot, status: 'livre' as const, patientName: undefined, detail: undefined };
-            if (slot.start === novoInicio)
-              return { ...slot, status: 'ocupado' as const, patientName: slotAtual.patientName, detail: `${slotAtual.detail ?? 'Consulta'} (remarcada)` };
-            return slot;
-          })
-        };
-      })
-    );
-    this.fecharModalAgendamento();
+    this.apiAgendamento.remarcar(slot.agendamentoId, novoInicio).subscribe({
+      next: () => {
+        this.carregarGrade();
+        this.fecharModalAgendamento();
+      }
+    });
   }
 
   detalheAgendamentoSelecionado(): AgendaSlot | undefined {
@@ -290,6 +298,7 @@ export class AgendaComponent {
       this.mostrarParcelas() ? parcelas : undefined
     );
     this.pagamentoRegistrado.set(true);
+    this.carregarGrade();
   }
 
   private findRow(professionalId: string, date: string) {

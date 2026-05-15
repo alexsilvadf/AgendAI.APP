@@ -10,7 +10,7 @@
     <form [formGroup]="form" (ngSubmit)="onSubmit()" class="form-card card" novalidate>
       @if (salvoComSucesso()) {
         <div class="alert alert-success" role="status">
-          Consulta registrada com sucesso (simulação). Em produção, os dados serão enviados à API.
+          Consulta registrada com sucesso na API.
         </div>
       }
       @if (erroConflito(); as erro) {
@@ -30,7 +30,7 @@
             "
           >
             <option value="" disabled>Selecione o profissional</option>
-            @for (p of professionals; track p.id) {
+            @for (p of professionals(); track p.id) {
               <option [value]="p.id">{{ p.name }} — {{ p.specialty }}</option>
             }
           </select>
@@ -103,7 +103,7 @@
             "
           >
             <option value="" disabled>Selecione o procedimento</option>
-            @for (pr of procedimentos; track pr.id) {
+            @for (pr of procedimentos(); track pr.id) {
               <option [value]="pr.id">{{ pr.nome }} — {{ formatarMoeda(pr.valor) }}</option>
             }
           </select>

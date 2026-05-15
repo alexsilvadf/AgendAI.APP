@@ -26,6 +26,10 @@ export class UsuariosComponent {
   readonly rbac = inject(RbacService);
   private readonly auth = inject(AuthService);
 
+  constructor() {
+    this.userService.carregar();
+  }
+
   // ─── Dados de referência ──────────────────────────────────────────────
   readonly roleLabels = ROLE_LABELS;
   readonly rolePermissions = ROLE_PERMISSIONS;

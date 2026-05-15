@@ -17,6 +17,11 @@ export class FichaPacienteComponent {
   private readonly router  = inject(Router);
   private readonly service = inject(PacienteService);
 
+  constructor() {
+    const id = this.route.snapshot.paramMap.get('id');
+    if (id) this.service.carregarDetalhe(id);
+  }
+
   readonly sexoLabels        = SEXO_LABELS;
   readonly estadoCivilLabels = ESTADO_CIVIL_LABELS;
 
