@@ -1,0 +1,152 @@
+<div class="agendar-page">
+  <header class="page-header">
+    <div class="brand-text">
+      <h1>Agendar consulta</h1>
+      <p>Preencha os dados para registrar um novo atendimento na clínica.</p>
+    </div>
+  </header>
+
+  <div class="layout">
+    <form [formGroup]="form" (ngSubmit)="onSubmit()" class="form-card card" novalidate>
+      @if (salvoComSucesso()) {
+        <div class="alert alert-success" role="status">
+          Consulta registrada com sucesso (simulação). Em produção, os dados serão enviados à API.
+        </div>
+      }
+      @if (erroConflito(); as erro) {
+        <div class="alert alert-error" role="alert">
+          {{ erro }}
+        </div>
+      }
+
+      <div class="form-grid">
+        <label class="field">
+          <span class="field-label">Profissional</span>
+          <select
+            formControlName="profissionalId"
+            (change)="onContextoAgendaChange()"
+            [attr.aria-invalid]="
+              form.controls.profissionalId.invalid && form.controls.profissionalId.touched
+            "
+          >
+            <option value="" disabled>Selecione o profissional</option>
+            @for (p of professionals; track p.id) {
+              <option [value]="p.id">{{ p.name }} — {{ p.specialty }}</option>
+            }
+          </select>
+          @if (form.controls.profissionalId.invalid && form.controls.profissionalId.touched) {
+            <span class="field-error">Escolha um profissional.</span>
+          }
+        </label>
+
+        <label class="field">
+          <span class="field-label">Paciente</span>
+          <select
+            formControlName="pacienteId"
+            (change)="onContextoAgendaChange()"
+            [attr.aria-invalid]="form.controls.pacienteId.invalid && form.controls.pacienteId.touched"
+          >
+            <option value="" disabled>Selecione o paciente</option>
+            @for (c of pacientes(); track c.id) {
+              <option [value]="c.id">{{ c.nome }}</option>
+            }
+          </select>
+          @if (form.controls.pacienteId.invalid && form.controls.pacienteId.touched) {
+            <span class="field-error">Escolha um paciente.</span>
+          }
+        </label>
+
+        <label class="field">
+          <span class="field-label">Data</span>
+          <input
+            type="date"
+            formControlName="data"
+            (change)="onContextoAgendaChange()"
+            [attr.aria-invalid]="form.controls.data.invalid && form.controls.data.touched"
+          />
+          @if (form.controls.data.invalid && form.controls.data.touched) {
+            <span class="field-error">Informe a data.</span>
+          }
+        </label>
+
+        <label class="field">
+          <span class="field-label">Horário</span>
+          <select
+            formControlName="hora"
+            [attr.aria-invalid]="form.controls.hora.invalid && form.controls.hora.touched"
+          >
+            <option value="" disabled>
+              @if (!form.controls.profissionalId.value) {
+                Selecione primeiro o profissional
+              } @else {
+                Selecione o horário
+              }
+            </option>
+            @for (h of horarios; track h) {
+              <option [value]="h" [disabled]="isHorarioIndisponivel(h)">
+                {{ h }} @if (isHorarioIndisponivel(h)) { — indisponível }
+              </option>
+            }
+          </select>
+          @if (form.controls.hora.invalid && form.controls.hora.touched) {
+            <span class="field-error">Escolha um horário.</span>
+          }
+        </label>
+
+        <label class="field field-span">
+          <span class="field-label">Procedimento</span>
+          <select
+            formControlName="procedimentoId"
+            (change)="aoEscolherProcedimento()"
+            [attr.aria-invalid]="
+              form.controls.procedimentoId.invalid && form.controls.procedimentoId.touched
+            "
+          >
+            <option value="" disabled>Selecione o procedimento</option>
+            @for (pr of procedimentos; track pr.id) {
+              <option [value]="pr.id">{{ pr.nome }} — {{ formatarMoeda(pr.valor) }}</option>
+            }
+          </select>
+          @if (form.controls.procedimentoId.invalid && form.controls.procedimentoId.touched) {
+            <span class="field-error">Escolha um procedimento.</span>
+          }
+        </label>
+
+        <label class="field">
+          <span class="field-label">Valor do procedimento (R$)</span>
+          <input
+            type="number"
+            formControlName="valor"
+            min="0.01"
+            step="0.01"
+            inputmode="decimal"
+            placeholder="0,00"
+            [attr.aria-invalid]="form.controls.valor.invalid && form.controls.valor.touched"
+          />
+          @if (form.controls.valor.errors?.['required'] && form.controls.valor.touched) {
+            <span class="field-error">Informe o valor.</span>
+          }
+          @if (form.controls.valor.errors?.['min'] && form.controls.valor.touched) {
+            <span class="field-error">O valor deve ser maior que zero.</span>
+          }
+        </label>
+      </div>
+
+      <div class="form-actions">
+        <button type="button" class="btn btn-secondary" (click)="limpar()">Limpar</button>
+        <button type="submit" class="btn btn-primary">Confirmar agendamento</button>
+      </div>
+    </form>
+
+    <aside class="side-card card" aria-label="Resumo">
+      <h2>Resumo</h2>
+      <p class="side-hint">Os valores sugeridos vêm da tabela de procedimentos e podem ser ajustados.</p>
+      <dl class="resumo">
+        <div>
+          <dt>Valor informado</dt>
+          <dd>{{ formatarMoeda(form.controls.valor.value) }}</dd>
+        </div>
+      </dl>
+    </aside>
+  </div>
+</div>

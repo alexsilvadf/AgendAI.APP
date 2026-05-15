@@ -1,0 +1,98 @@
+.recover-page {
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  font-family: 'DM Sans', system-ui, sans-serif;
+  background: linear-gradient(160deg, #ecfdf5 0%, #f8fafc 50%, #f1f5f9 100%);
+  color: #0f172a;
+}
+
+.recover-card {
+  width: 100%;
+  max-width: 420px;
+  background: #fff;
+  border-radius: 1.25rem;
+  padding: 2rem;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 24px 48px -12px rgba(15, 23, 42, 0.1);
+}
+
+.back-link {
+  display: inline-block;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #0d9488;
+  text-decoration: none;
+  margin-bottom: 1.25rem;
+}
+
+.back-link:hover {
+  text-decoration: underline;
+}
+
+h1 {
+  font-family: 'Fraunces', Georgia, serif;
+  font-size: 1.625rem;
+  margin: 0 0 0.5rem;
+  letter-spacing: -0.02em;
+}
+
+p {
+  margin: 0 0 1.5rem;
+  color: #64748b;
+  font-size: 0.9375rem;
+  line-height: 1.5;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-bottom: 1rem;
+}
+
+.field-label {
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.field input {
+  width: 100%;
+  padding: 0.75rem 0.9rem;
+  font: inherit;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.65rem;
+  background: #fafafa;
+}
+
+.field input:focus {
+  outline: none;
+  border-color: #0d9488;
+  box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.2);
+  background: #fff;
+}
+
+.field-error {
+  font-size: 0.8125rem;
+  color: #b91c1c;
+}
+
+.btn-submit {
+  width: 100%;
+  margin-top: 0.5rem;
+  padding: 0.8rem;
+  font: inherit;
+  font-weight: 600;
+  color: #fff;
+  border: none;
+  border-radius: 0.65rem;
+  cursor: pointer;
+  background: linear-gradient(135deg, #0d9488, #0f766e);
+  box-shadow: 0 10px 24px -8px rgba(13, 148, 136, 0.55);
+}
+
+.btn-submit:hover {
+  background: linear-gradient(135deg, #0f766e, #134e4a);
+}

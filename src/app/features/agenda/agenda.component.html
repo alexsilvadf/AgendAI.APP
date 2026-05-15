@@ -1,0 +1,287 @@
+<div class="agenda-page">
+  <header class="page-header">
+    <div class="brand-text">
+      <h1>Agenda da clínica</h1>
+      <p>Visualize horários livres, ocupados e indisponíveis por profissional.</p>
+    </div>
+    <button
+      type="button"
+      class="btn-sync"
+      [class.btn-sync--loading]="sincronizando()"
+      (click)="sincronizar()"
+      title="Verificar novos atendimentos finalizados"
+    >
+      <span class="sync-icon" aria-hidden="true">↻</span>
+      <span>{{ sincronizando() ? 'Atualizando...' : 'Atualizar notificações' }}</span>
+    </button>
+  </header>
+
+
+
+  <section class="toolbar card">
+    <div class="toolbar-row">
+      <label class="filter">
+        <span class="filter-label">Data</span>
+        <div class="date-stepper">
+          <button type="button" class="step-btn" (click)="shiftDate(-1)" aria-label="Dia anterior">‹</button>
+          <input type="date" [value]="selectedDate()" (change)="onDateChange($any($event.target).value)" />
+          <button type="button" class="step-btn" (click)="shiftDate(1)" aria-label="Próximo dia">›</button>
+        </div>
+      </label>
+
+      <label class="filter filter-grow">
+        <span class="filter-label">Profissional</span>
+        <select [value]="selectedProfessionalId()" (change)="onProfessionalChange($any($event.target).value)">
+          <option value="all">Todos os profissionais</option>
+          @for (p of professionals; track p.id) {
+            <option [value]="p.id">{{ p.name }} — {{ p.specialty }}</option>
+          }
+        </select>
+      </label>
+    </div>
+
+    <div class="legend" role="list">
+      <span class="legend-title">Legenda:</span>
+      <span class="legend-item slot-livre"        role="listitem">Disponível</span>
+      <span class="legend-item slot-ocupado"       role="listitem">Ocupado</span>
+      <span class="legend-item slot-indisponivel"  role="listitem">Indisponível</span>
+      <span class="legend-item slot-atendido"      role="listitem">Atendido — aguarda pagamento</span>
+      <span class="legend-item slot-pago"          role="listitem">✓ Pago</span>
+    </div>
+  </section>
+
+  @let sum = summary();
+  <section class="stats" aria-label="Resumo do dia">
+    <article class="stat card">
+      <span class="stat-value">{{ sum.livre }}</span>
+      <span class="stat-label">Janelas livres</span>
+    </article>
+    <article class="stat card">
+      <span class="stat-value muted">{{ sum.ocupado }}</span>
+      <span class="stat-label">Agendado</span>
+    </article>
+    <article class="stat card">
+      <span class="stat-value warn">{{ sum.indisponivel }}</span>
+      <span class="stat-label">Bloqueado</span>
+    </article>
+    <article class="stat card subtle">
+      <span class="stat-value">{{ sum.total }}</span>
+      <span class="stat-label">Total de faixas</span>
+    </article>
+  </section>
+
+  <section class="boards" aria-live="polite">
+    @for (row of scheduleComPendentes(); track row.professionalId + row.date) {
+      @let prof = profById(row.professionalId);
+      <article class="board card">
+        <header class="board-head">
+          <div>
+            <h2>{{ prof?.name ?? 'Profissional' }}</h2>
+            <p>{{ prof?.specialty }}</p>
+          </div>
+          <time class="board-date" [attr.datetime]="row.date">{{ formatDisplayDate(row.date) }}</time>
+        </header>
+
+        <div class="slot-grid" role="list">
+          @for (slot of row.slots; track slot.start + slot.end) {
+            @let isPago = !!slot.atendimento?.pago;
+            <div
+              class="slot"
+              [class.slot-livre]="slot.status === 'livre' && !slot.pendente && !isPago"
+              [class.slot-ocupado]="slot.status === 'ocupado' && !slot.pendente && !isPago"
+              [class.slot-atendido]="!!slot.pendente"
+              [class.slot-pago]="isPago"
+              [class.slot-indisponivel]="slot.status === 'indisponivel' && !slot.pendente && !isPago"
+              [class.slot-clickable]="(slot.status === 'ocupado' || slot.status === 'livre') && !isPago"
+              role="listitem"
+              [attr.tabindex]="(slot.status === 'ocupado' || slot.status === 'livre') && !isPago ? 0 : -1"
+              (click)="!isPago && onSlotClick(row.professionalId, row.date, slot)"
+              (keydown.enter)="!isPago && onSlotClick(row.professionalId, row.date, slot)"
+              [attr.aria-label]="slot.start + ' a ' + slot.end + (isPago ? ', atendimento pago' : slot.pendente ? ', aguarda pagamento' : '')"
+            >
+              <div class="slot-header">
+                <span class="slot-time">{{ slot.start }} – {{ slot.end }}</span>
+
+                @if (slot.pendente) {
+                  <button
+                    type="button"
+                    class="sino-btn"
+                    (click)="abrirCobranca(slot.pendente, $event)"
+                    aria-label="Atendimento concluído — clique para registrar pagamento"
+                    title="Atendimento concluído — registrar pagamento"
+                  >
+                    <span class="sino-icon" aria-hidden="true">🔔</span>
+                    <span class="sino-pulse" aria-hidden="true"></span>
+                  </button>
+                }
+                @if (isPago) {
+                  <span class="pago-icon" aria-hidden="true">✓</span>
+                }
+              </div>
+
+              @if (slot.status === 'livre' && !slot.pendente && !isPago) {
+                <span class="slot-meta">Livre para agendar</span>
+              }
+              @if (slot.status === 'ocupado' || slot.pendente || isPago) {
+                <span class="slot-meta">{{ slot.patientName ?? slot.atendimento?.paciente }}</span>
+                @if (isPago) {
+                  <span class="slot-tag-pago">✓ Pago</span>
+                } @else if (slot.pendente) {
+                  <span class="slot-tag-atendido">✓ Atendido</span>
+                } @else {
+                  <span class="slot-detail">{{ slot.detail }}</span>
+                }
+              }
+              @if (slot.status === 'indisponivel' && !slot.pendente && !isPago) {
+                <span class="slot-meta">Indisponível</span>
+                @if (slot.detail) {
+                  <span class="slot-detail">{{ slot.detail }}</span>
+                }
+              }
+            </div>
+          }
+        </div>
+      </article>
+    } @empty {
+      <div class="empty card">
+        <p>Nenhum horário encontrado para os filtros selecionados.</p>
+      </div>
+    }
+  </section>
+
+  <!-- ─── Modal: detalhes do agendamento (remarcar/cancelar) ─────────── -->
+  @if (agendamentoSelecionado(); as ag) {
+    @let detalhe = detalheAgendamentoSelecionado();
+    @let profissional = profissionalSelecionado();
+    <div class="modal-backdrop" (click)="fecharModalAgendamento()"></div>
+    <section
+      class="modal card"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Detalhes do agendamento"
+      (click)="$event.stopPropagation()"
+    >
+      <header class="modal-head">
+        <h3>Detalhes do agendamento</h3>
+        <button type="button" class="modal-close" (click)="fecharModalAgendamento()">×</button>
+      </header>
+      <div class="modal-content">
+        <p><strong>Profissional:</strong> {{ profissional?.name }}</p>
+        <p><strong>Especialidade:</strong> {{ profissional?.specialty }}</p>
+        <p><strong>Data:</strong> {{ formatDisplayDate(ag.date) }}</p>
+        <p><strong>Horário:</strong> {{ detalhe?.start }} – {{ detalhe?.end }}</p>
+        <p><strong>Paciente:</strong> {{ detalhe?.patientName ?? 'Não informado' }}</p>
+        <p><strong>Observação:</strong> {{ detalhe?.detail ?? 'Consulta' }}</p>
+
+        <label class="modal-field">
+          <span class="filter-label">Remarcar para</span>
+          <select [value]="novoHorario()" (change)="selecionarNovoHorario($any($event.target).value)">
+            <option value="">Selecione um horário livre</option>
+            @for (h of horariosDisponiveisRemarcacao(); track h.start) {
+              <option [value]="h.start">{{ h.start }} – {{ h.end }}</option>
+            }
+          </select>
+        </label>
+      </div>
+      <footer class="modal-actions">
+        <button type="button" class="btn-modal btn-danger" (click)="cancelarConsulta()">Cancelar consulta</button>
+        <button type="button" class="btn-modal btn-primary" [disabled]="!novoHorario()" (click)="remarcarConsulta()">Remarcar consulta</button>
+      </footer>
+    </section>
+  }
+
+  <!-- ─── Modal: cobrança pós-atendimento ────────────────────────────── -->
+  @if (atendimentoCobranca(); as atend) {
+    <div class="modal-backdrop" (click)="fecharCobranca()"></div>
+    <section
+      class="modal modal-cobranca card"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Registrar pagamento"
+      (click)="$event.stopPropagation()"
+    >
+      <header class="modal-head">
+        <div class="modal-head-title">
+          <span class="sino-icon-lg" aria-hidden="true">🔔</span>
+          <h3>Registrar pagamento</h3>
+        </div>
+        <button type="button" class="modal-close" (click)="fecharCobranca()">×</button>
+      </header>
+
+      @if (pagamentoRegistrado()) {
+        <!-- ── Confirmação de pagamento ── -->
+        <div class="pagamento-ok">
+          <div class="pagamento-ok-icon" aria-hidden="true">✓</div>
+          <h4>Pagamento registrado!</h4>
+          <p>O atendimento de <strong>{{ atend.paciente }}</strong> foi quitado com sucesso.</p>
+          <button type="button" class="btn-modal btn-primary" (click)="fecharCobranca()">Fechar</button>
+        </div>
+      } @else {
+        <!-- ── Resumo do atendimento ── -->
+        <div class="modal-content">
+          <div class="cobranca-resumo">
+            <h4>Resumo do atendimento</h4>
+            <dl class="resumo-dl">
+              <div><dt>Paciente</dt>      <dd>{{ atend.paciente }}</dd></div>
+              <div><dt>Profissional</dt>  <dd>{{ atend.profissional }}</dd></div>
+              <div><dt>Procedimento</dt>  <dd>{{ atend.procedimento }}</dd></div>
+              <div><dt>Data / Hora</dt>   <dd>{{ formatDisplayDate(atend.data) }} às {{ atend.hora }}</dd></div>
+              @if (atend.dentes) {
+                <div><dt>Dentes</dt><dd>{{ atend.dentes }}</dd></div>
+              }
+              @if (atend.observacoes) {
+                <div class="resumo-obs"><dt>Observações</dt><dd>{{ atend.observacoes }}</dd></div>
+              }
+            </dl>
+
+            <div class="valor-cobranca">
+              <span class="valor-label">Valor a receber</span>
+              <span class="valor-num">{{ formatarMoeda(atend.valor) }}</span>
+            </div>
+
+            @if (atend.retorno) {
+              <div class="retorno-aviso">📅 Paciente necessita de retorno — lembre de agendar.</div>
+            }
+          </div>
+
+          <!-- ── Formulário de pagamento ── -->
+          <form [formGroup]="formPagamento" (ngSubmit)="confirmarPagamento()" novalidate class="pagamento-form">
+            <h4>Forma de pagamento</h4>
+
+            <label class="field">
+              <span class="field-label">Selecione a forma de pagamento</span>
+              <select
+                formControlName="formaPagamento"
+                [attr.aria-invalid]="formPagamento.controls.formaPagamento.invalid && formPagamento.controls.formaPagamento.touched"
+              >
+                <option value="" disabled>Escolha uma opção</option>
+                @for (fp of formasPagamento; track fp.value) {
+                  <option [value]="fp.value">{{ fp.label }}</option>
+                }
+              </select>
+              @if (formPagamento.controls.formaPagamento.invalid && formPagamento.controls.formaPagamento.touched) {
+                <span class="field-error">Selecione a forma de pagamento.</span>
+              }
+            </label>
+
+            @if (mostrarParcelas()) {
+              <label class="field">
+                <span class="field-label">Número de parcelas</span>
+                <select formControlName="parcelas">
+                  @for (n of [2,3,4,5,6,7,8,9,10,11,12]; track n) {
+                    <option [value]="n">{{ n }}x de {{ formatarMoeda(atend.valor / n) }}</option>
+                  }
+                </select>
+              </label>
+            }
+
+            <div class="modal-actions">
+              <button type="button" class="btn-modal btn-secondary" (click)="fecharCobranca()">Cancelar</button>
+              <button type="submit" class="btn-modal btn-primary">✓ Confirmar pagamento</button>
+            </div>
+          </form>
+        </div>
+      }
+    </section>
+  }
+</div>

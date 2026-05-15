@@ -1,0 +1,107 @@
+<div class="login-page">
+  <div class="login-brand" aria-hidden="true">
+    <div class="brand-glow"></div>
+    <div class="brand-content">
+      <span class="brand-badge">Agendamento inteligente</span>
+      <h1 class="brand-title">AgendAi</h1>
+      <p class="brand-tagline">
+        Gestão de consultas e agendas para clínicas com tranquilidade no seu dia a dia.
+      </p>
+      <ul class="brand-highlights">
+        <li>
+          <span class="hi-icon" aria-hidden="true"></span>
+          Agenda unificada por profissional e sala
+        </li>
+        <li>
+          <span class="hi-icon" aria-hidden="true"></span>
+          Lembretes e confirmações para pacientes
+        </li>
+        <li>
+          <span class="hi-icon" aria-hidden="true"></span>
+          Painel pensado para equipes de saúde
+        </li>
+      </ul>
+    </div>
+    <div class="brand-illus">
+      <svg viewBox="0 0 320 280" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <rect x="48" y="40" width="200" height="140" rx="16" fill="rgba(255,255,255,0.12)" />
+        <rect x="64" y="60" width="88" height="10" rx="5" fill="rgba(255,255,255,0.35)" />
+        <rect x="64" y="82" width="168" height="8" rx="4" fill="rgba(255,255,255,0.2)" />
+        <rect x="64" y="98" width="140" height="8" rx="4" fill="rgba(255,255,255,0.15)" />
+        <circle cx="92" cy="152" r="20" fill="rgba(255,255,255,0.25)" />
+        <rect x="124" y="136" width="100" height="10" rx="5" fill="rgba(255,255,255,0.3)" />
+        <rect x="124" y="154" width="72" height="8" rx="4" fill="rgba(255,255,255,0.18)" />
+        <path
+          d="M200 200c40 0 72 28 72 62v18H48v-18c0-34 32-62 72-62s72-28 112-28 72 28 72 28"
+          fill="rgba(255,255,255,0.08)"
+        />
+      </svg>
+    </div>
+  </div>
+
+  <div class="login-panel">
+    <div class="panel-card">
+      <header class="panel-head">
+        <h2>Bem-vindo de volta</h2>
+        <p>Entre com seu usuário para acessar a agenda da clínica.</p>
+      </header>
+
+      <form [formGroup]="form" (ngSubmit)="onSubmit()" class="login-form" novalidate>
+        @if (erroLogin(); as erro) {
+          <div class="alert-error" role="alert">{{ erro }}</div>
+        }
+
+        <label class="field">
+          <span class="field-label">Usuário</span>
+          <input
+            type="text"
+            formControlName="usuario"
+            autocomplete="username"
+            placeholder="seu.usuario ou e-mail"
+            [attr.aria-invalid]="form.controls.usuario.invalid && form.controls.usuario.touched"
+          />
+          @if (form.controls.usuario.invalid && form.controls.usuario.touched) {
+            <span class="field-error">Informe o usuário.</span>
+          }
+        </label>
+
+        <label class="field">
+          <span class="field-label">Senha</span>
+          <input
+            type="password"
+            formControlName="senha"
+            autocomplete="current-password"
+            placeholder="••••••••"
+            [attr.aria-invalid]="form.controls.senha.invalid && form.controls.senha.touched"
+          />
+          @if (form.controls.senha.errors?.['required'] && form.controls.senha.touched) {
+            <span class="field-error">Informe a senha.</span>
+          }
+          @if (form.controls.senha.errors?.['minlength'] && form.controls.senha.touched) {
+            <span class="field-error">Senha deve ter pelo menos 4 caracteres.</span>
+          }
+        </label>
+
+        <button type="submit" class="btn btn-primary">Entrar</button>
+
+        <button type="button" class="btn btn-ghost" (click)="recuperarSenha()">
+          Recuperar senha
+        </button>
+      </form>
+
+      <footer class="panel-foot">
+        <span>Precisa de ajuda?</span>
+        <a routerLink="/recuperar-senha">Fale com o suporte</a>
+      </footer>
+
+      <div class="demo-hint">
+        <p class="demo-title">Usuários de demonstração</p>
+        <ul>
+          <li><strong>admin</strong> / admin123 — Administrador</li>
+          <li><strong>ana.martins</strong> / senha123 — Dentista</li>
+          <li><strong>carla</strong> / senha123 — Recepcionista</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>

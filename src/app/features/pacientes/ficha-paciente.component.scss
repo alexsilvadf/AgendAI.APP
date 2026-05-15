@@ -1,0 +1,293 @@
+.ficha-page {
+  --ink: #0f172a;
+  --muted: #64748b;
+  --surface: #ffffff;
+  --line: #e2e8f0;
+  --teal-900: #134e4a;
+  --teal-700: #0f766e;
+  --teal-600: #0d9488;
+  --mist: #ecfdf5;
+
+  min-height: 100dvh;
+  padding: clamp(1rem, 3vw, 2rem);
+  font-family: 'DM Sans', system-ui, sans-serif;
+  color: var(--ink);
+  background: linear-gradient(180deg, var(--mist) 0%, #f8fafc 38%, #f1f5f9 100%);
+}
+
+// ─── Header ────────────────────────────────────────────────────────────────
+.page-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.btn-back {
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--teal-700);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+  &:hover { text-decoration: underline; }
+}
+
+.header-info {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex: 1;
+
+  h1 {
+    margin: 0 0 0.2rem;
+    font-family: 'Fraunces', Georgia, serif;
+    font-size: clamp(1.25rem, 2.5vw, 1.6rem);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+
+  p {
+    margin: 0;
+    font-size: 0.875rem;
+    color: var(--muted);
+  }
+}
+
+.avatar {
+  width: 3rem;
+  height: 3rem;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--teal-600), var(--teal-900));
+  color: #fff;
+  font-family: 'Fraunces', Georgia, serif;
+  font-size: 1.25rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-shrink: 0;
+}
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.65rem;
+  border-radius: 999px;
+  border: 1px solid #6ee7b7;
+  background: #d1fae5;
+  color: #065f46;
+  font-weight: 600;
+  font-size: 0.75rem;
+
+  &.inativo {
+    border-color: #fdba74;
+    background: #ffedd5;
+    color: #9a3412;
+  }
+}
+
+// ─── Grid da ficha ─────────────────────────────────────────────────────────
+.ficha-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+}
+
+.section-full { grid-column: 1 / -1; }
+
+// ─── Card base ─────────────────────────────────────────────────────────────
+.card {
+  background: var(--surface);
+  border: 1px solid rgba(226, 232, 240, 0.95);
+  border-radius: 1rem;
+  box-shadow: 0 1px 2px rgba(15,23,42,.04), 0 16px 40px -18px rgba(15,23,42,.12);
+}
+
+.section-card { padding: 1.25rem; }
+
+.section-title {
+  margin: 0 0 1rem;
+  font-family: 'Fraunces', Georgia, serif;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--teal-700);
+  padding-bottom: 0.65rem;
+  border-bottom: 1px solid var(--line);
+}
+
+// ─── Data list ─────────────────────────────────────────────────────────────
+.data-list {
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.75rem 1.5rem;
+
+  div { display: flex; flex-direction: column; gap: 0.15rem; }
+
+  dt {
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--muted);
+  }
+
+  dd {
+    margin: 0;
+    font-size: 0.9rem;
+    font-weight: 500;
+  }
+}
+
+.mono {
+  font-family: 'Courier New', monospace;
+  font-size: 0.85rem;
+}
+
+.empty-info {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+// ─── Anamnese ──────────────────────────────────────────────────────────────
+.anamnese-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.6rem;
+  margin-bottom: 1rem;
+}
+
+.anamnese-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.6rem;
+  background: #f8fafc;
+  border: 1px solid var(--line);
+
+  &.positivo {
+    background: #fff7ed;
+    border-color: #fdba74;
+  }
+}
+
+.anamnese-icon { font-size: 0.9rem; flex-shrink: 0; }
+
+.alerta-box {
+  margin-top: 0.65rem;
+  padding: 0.75rem 1rem;
+  border-radius: 0.65rem;
+  background: #fff7ed;
+  border: 1px solid #fdba74;
+  color: #92400e;
+  font-size: 0.875rem;
+}
+
+.info-box {
+  margin-top: 0.65rem;
+  padding: 0.75rem 1rem;
+  border-radius: 0.65rem;
+  background: #eff6ff;
+  border: 1px solid #93c5fd;
+  color: #1e40af;
+  font-size: 0.875rem;
+}
+
+.obs-box {
+  margin-top: 0.65rem;
+  padding: 0.75rem 1rem;
+  border-radius: 0.65rem;
+  background: #f8fafc;
+  border: 1px solid var(--line);
+  font-size: 0.875rem;
+  color: var(--ink);
+}
+
+// ─── Histórico ─────────────────────────────────────────────────────────────
+.table-wrap { overflow-x: auto; }
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+th, td {
+  padding: 0.65rem 0.55rem;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+
+th {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+}
+
+.obs-cell {
+  max-width: 240px;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+// ─── Botões ────────────────────────────────────────────────────────────────
+.btn {
+  font: inherit;
+  font-weight: 600;
+  font-size: 0.875rem;
+  padding: 0.6rem 1.1rem;
+  border-radius: 0.65rem;
+  cursor: pointer;
+  border: none;
+  transition: background 0.12s;
+}
+
+.btn-primary {
+  color: #fff;
+  background: linear-gradient(135deg, var(--teal-600), #0f766e);
+  &:hover { background: linear-gradient(135deg, #0f766e, var(--teal-900)); }
+}
+
+// ─── Not found ─────────────────────────────────────────────────────────────
+.not-found {
+  min-height: 60dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  font-family: 'DM Sans', system-ui, sans-serif;
+  color: var(--muted);
+}
+
+// ─── Responsivo ────────────────────────────────────────────────────────────
+@media (max-width: 900px) {
+  .ficha-grid { grid-template-columns: 1fr; }
+  .section-full { grid-column: auto; }
+  .anamnese-grid { grid-template-columns: repeat(2, 1fr); }
+  .data-list { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 600px) {
+  .page-header { flex-direction: column; align-items: flex-start; }
+  .header-info { flex-direction: column; align-items: flex-start; }
+  .anamnese-grid { grid-template-columns: 1fr; }
+  .header-actions { width: 100%; justify-content: space-between; }
+}

@@ -1,0 +1,307 @@
+<div class="usuarios-page">
+
+  <header class="page-header">
+    <div class="brand-text">
+      <h1>Gestão de usuários</h1>
+      <p>Cadastre profissionais, defina papéis e controle o acesso ao sistema.</p>
+    </div>
+  </header>
+
+  <!-- Mensagem de feedback -->
+  @if (mensagem(); as msg) {
+    <div
+      class="alert"
+      [class.alert-success]="msg.tipo === 'sucesso'"
+      [class.alert-error]="msg.tipo === 'erro'"
+      role="alert"
+    >
+      {{ msg.texto }}
+    </div>
+  }
+
+  <!-- Resumo -->
+  @let sum = resumo();
+  <section class="stats" aria-label="Resumo de usuários">
+    <article class="stat card">
+      <span class="stat-value">{{ sum.total }}</span>
+      <span class="stat-label">Total</span>
+    </article>
+    <article class="stat card">
+      <span class="stat-value teal">{{ sum.ativos }}</span>
+      <span class="stat-label">Ativos</span>
+    </article>
+    <article class="stat card">
+      <span class="stat-value">{{ sum.administradores }}</span>
+      <span class="stat-label">Administradores</span>
+    </article>
+    <article class="stat card">
+      <span class="stat-value">{{ sum.dentistas }}</span>
+      <span class="stat-label">Dentistas</span>
+    </article>
+    <article class="stat card">
+      <span class="stat-value">{{ sum.recepcionistas }}</span>
+      <span class="stat-label">Recepcionistas</span>
+    </article>
+  </section>
+
+  <div class="layout">
+
+    <!-- ── Formulário ─────────────────────────────────────────────────── -->
+    <section class="form-card card" aria-label="Formulário de usuário">
+      <h2>{{ editandoId() ? 'Editar usuário' : 'Novo usuário' }}</h2>
+
+      <form [formGroup]="form" (ngSubmit)="salvar()" novalidate>
+        <div class="form-grid">
+
+          <!-- Nome -->
+          <label class="field field-span">
+            <span class="field-label">Nome completo</span>
+            <input
+              type="text"
+              formControlName="nome"
+              placeholder="Ex.: Dra. Ana Martins"
+              [attr.aria-invalid]="form.controls.nome.invalid && form.controls.nome.touched"
+            />
+            @if (form.controls.nome.invalid && form.controls.nome.touched) {
+              <span class="field-error">Informe o nome com pelo menos 3 caracteres.</span>
+            }
+          </label>
+
+          <!-- Login -->
+          <label class="field">
+            <span class="field-label">Login (usuário)</span>
+            <input
+              type="text"
+              formControlName="usuario"
+              placeholder="Ex.: ana.martins"
+              autocomplete="off"
+              [attr.aria-invalid]="form.controls.usuario.invalid && form.controls.usuario.touched"
+            />
+            @if (form.controls.usuario.errors?.['required'] && form.controls.usuario.touched) {
+              <span class="field-error">Informe o login.</span>
+            }
+            @if (form.controls.usuario.errors?.['minlength'] && form.controls.usuario.touched) {
+              <span class="field-error">Mínimo de 3 caracteres.</span>
+            }
+            @if (form.controls.usuario.errors?.['pattern'] && form.controls.usuario.touched) {
+              <span class="field-error">Sem espaços no login.</span>
+            }
+          </label>
+
+          <!-- Senha -->
+          <label class="field">
+            <span class="field-label">
+              Senha
+              @if (editandoId()) { <span class="field-hint">(deixe em branco para manter)</span> }
+            </span>
+            <div class="input-group">
+              <input
+                [type]="mostrarSenha() ? 'text' : 'password'"
+                formControlName="senha"
+                placeholder="••••••••"
+                autocomplete="new-password"
+                [attr.aria-invalid]="form.controls.senha.invalid && form.controls.senha.touched"
+              />
+              <button
+                type="button"
+                class="toggle-senha"
+                (click)="mostrarSenha.update(v => !v)"
+                [attr.aria-label]="mostrarSenha() ? 'Ocultar senha' : 'Mostrar senha'"
+              >
+                {{ mostrarSenha() ? '🙈' : '👁️' }}
+              </button>
+            </div>
+            @if (form.controls.senha.errors?.['required'] && form.controls.senha.touched) {
+              <span class="field-error">Informe a senha.</span>
+            }
+            @if (form.controls.senha.errors?.['minlength'] && form.controls.senha.touched) {
+              <span class="field-error">Mínimo de 4 caracteres.</span>
+            }
+          </label>
+
+          <!-- Papel -->
+          <label class="field">
+            <span class="field-label">Papel / Perfil</span>
+            <select
+              formControlName="role"
+              [attr.aria-invalid]="form.controls.role.invalid && form.controls.role.touched"
+            >
+              @for (r of roles; track r) {
+                <option [value]="r">{{ roleLabels[r] }}</option>
+              }
+            </select>
+          </label>
+
+          <!-- Especialidade (só dentistas) -->
+          @if (mostrarEspecialidade()) {
+            <label class="field">
+              <span class="field-label">Especialidade</span>
+              <input
+                type="text"
+                formControlName="especialidade"
+                placeholder="Ex.: Cardiologia"
+              />
+            </label>
+          }
+
+          <!-- Status -->
+          <label class="field field-checkbox">
+            <input type="checkbox" formControlName="ativo" />
+            <span>Usuário ativo</span>
+          </label>
+
+        </div>
+
+        <!-- Permissões do papel selecionado -->
+        <div class="permissoes-preview">
+          <p class="permissoes-title">Permissões do perfil <strong>{{ roleLabels[form.controls.role.value] }}</strong>:</p>
+          <ul class="permissoes-list">
+            @for (p of permissoesDoRole(form.controls.role.value); track p) {
+              <li class="perm-tag">{{ p }}</li>
+            }
+          </ul>
+        </div>
+
+        <div class="form-actions">
+          @if (editandoId()) {
+            <button type="button" class="btn btn-secondary" (click)="cancelarEdicao()">
+              Cancelar
+            </button>
+          }
+          <button type="submit" class="btn btn-primary">
+            {{ editandoId() ? 'Salvar alterações' : 'Cadastrar usuário' }}
+          </button>
+        </div>
+      </form>
+    </section>
+
+    <!-- ── Listagem ────────────────────────────────────────────────────── -->
+    <section class="list-card card" aria-label="Lista de usuários">
+      <header class="list-head">
+        <h2>Usuários cadastrados</h2>
+      </header>
+
+      <!-- Filtros -->
+      <div class="filters">
+        <label class="field">
+          <span class="field-label">Buscar</span>
+          <input
+            type="text"
+            [value]="filtroNome()"
+            (input)="onFiltroNome($any($event.target).value)"
+            placeholder="Nome ou login…"
+          />
+        </label>
+        <label class="field">
+          <span class="field-label">Perfil</span>
+          <select [value]="filtroRole()" (change)="onFiltroRole($any($event.target).value)">
+            <option value="todos">Todos os perfis</option>
+            @for (r of roles; track r) {
+              <option [value]="r">{{ roleLabels[r] }}</option>
+            }
+          </select>
+        </label>
+        <label class="field">
+          <span class="field-label">Status</span>
+          <select [value]="filtroAtivo()" (change)="onFiltroAtivo($any($event.target).value)">
+            <option value="todos">Todos</option>
+            <option value="ativo">Ativos</option>
+            <option value="inativo">Inativos</option>
+          </select>
+        </label>
+      </div>
+
+      <!-- Tabela -->
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Nome</th>
+              <th>Login</th>
+              <th>Perfil</th>
+              <th>Status</th>
+              <th>Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (u of listaFiltrada(); track u.id; let i = $index) {
+              <tr [class.row-inativo]="!u.ativo">
+                <td>
+                  <button
+                    type="button"
+                    class="nome-btn"
+                    (click)="abrirDetalhe(u.id)"
+                    [attr.aria-expanded]="detalheId() === u.id"
+                  >
+                    {{ u.nome }}
+                    @if (u.especialidade) {
+                      <span class="especialidade">{{ u.especialidade }}</span>
+                    }
+                  </button>
+                </td>
+                <td class="login-cell">{{ u.usuario }}</td>
+                <td>
+                  <span class="role-pill" [attr.data-role]="u.role">
+                    {{ roleLabels[u.role] }}
+                  </span>
+                </td>
+                <td>
+                  <span class="status-pill" [class.inativo]="!u.ativo">
+                    {{ u.ativo ? 'Ativo' : 'Inativo' }}
+                  </span>
+                </td>
+                <td class="actions">
+                  <button type="button" class="table-btn" (click)="editar(u)">Editar</button>
+                  <button type="button" class="table-btn warn" (click)="alternarAtivo(u.id)">
+                    {{ u.ativo ? 'Inativar' : 'Ativar' }}
+                  </button>
+                  <button type="button" class="table-btn danger" (click)="excluir(u)">Excluir</button>
+                </td>
+              </tr>
+
+              <!-- Linha de detalhe expansível -->
+              @if (detalheId() === u.id) {
+                <tr class="detalhe-row">
+                  <td colspan="5">
+                    <div class="detalhe-card">
+                      <div class="detalhe-grid">
+                        <div>
+                          <p class="detalhe-label">Cadastrado em</p>
+                          <p class="detalhe-value">{{ formatarData(u.criadoEm) }}</p>
+                        </div>
+                        @if (u.especialidade) {
+                          <div>
+                            <p class="detalhe-label">Especialidade</p>
+                            <p class="detalhe-value">{{ u.especialidade }}</p>
+                          </div>
+                        }
+                        <div class="detalhe-perms">
+                          <p class="detalhe-label">Permissões do perfil</p>
+                          <ul class="permissoes-list">
+                            @for (p of permissoesDoRole(u.role); track p) {
+                              <li class="perm-tag">{{ p }}</li>
+                            }
+                          </ul>
+                        </div>
+                      </div>
+                      <button type="button" class="detalhe-close" (click)="fecharDetalhe()">
+                        Fechar ▲
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              }
+            } @empty {
+              <tr>
+                <td colspan="5" class="empty-row">
+                  Nenhum usuário encontrado para os filtros selecionados.
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+  </div>
+</div>

@@ -1,0 +1,608 @@
+.financeiro-page {
+  --ink: #0f172a;
+  --muted: #64748b;
+  --surface: #ffffff;
+  --line: #e2e8f0;
+  --teal-900: #134e4a;
+  --teal-700: #0f766e;
+  --teal-600: #0d9488;
+  --mist: #ecfdf5;
+
+  min-height: 100dvh;
+  padding: clamp(1rem, 3vw, 2rem);
+  font-family: 'DM Sans', system-ui, sans-serif;
+  color: var(--ink);
+  background: linear-gradient(180deg, var(--mist) 0%, #f8fafc 38%, #f1f5f9 100%);
+}
+
+// ─── Header ────────────────────────────────────────────────────────────────
+.page-header { margin-bottom: 1.5rem; }
+
+.brand-text h1 {
+  margin: 0 0 0.25rem;
+  font-family: 'Fraunces', Georgia, serif;
+  font-size: clamp(1.35rem, 2.5vw, 1.75rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--teal-900);
+}
+
+.brand-text p { margin: 0; color: var(--muted); font-size: 0.9rem; }
+
+// ─── Card base ─────────────────────────────────────────────────────────────
+.card {
+  background: var(--surface);
+  border: 1px solid rgba(226,232,240,.95);
+  border-radius: 1rem;
+  box-shadow: 0 1px 2px rgba(15,23,42,.04), 0 16px 40px -18px rgba(15,23,42,.12);
+}
+
+// ─── Resumo cards ──────────────────────────────────────────────────────────
+.resumo-cards {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.85rem;
+  margin-bottom: 1.25rem;
+}
+
+.resumo-card {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 1rem 1.25rem;
+
+  &.receita  { border-left: 4px solid #22c55e; }
+  &.despesa  { border-left: 4px solid #f87171; }
+  &.saldo    { border-left: 4px solid var(--teal-600); }
+  &.pendente { border-left: 4px solid #f59e0b; }
+  &.negativo { border-left-color: #f87171; }
+}
+
+.resumo-icon {
+  font-size: 1.4rem;
+  font-weight: 700;
+  opacity: 0.6;
+  flex-shrink: 0;
+}
+
+.resumo-label {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+  margin-bottom: 0.2rem;
+}
+
+.resumo-valor {
+  display: block;
+  font-family: 'Fraunces', Georgia, serif;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--teal-900);
+}
+
+// ─── Abas ──────────────────────────────────────────────────────────────────
+.abas {
+  display: flex;
+  gap: 0.25rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.aba {
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 500;
+  padding: 0.55rem 1rem;
+  border-radius: 0.65rem;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--muted);
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+
+  &:hover { background: #f0fdf4; color: var(--teal-700); border-color: #6ee7b7; }
+
+  &--active {
+    background: #d1fae5;
+    color: var(--teal-700);
+    border-color: var(--teal-600);
+    font-weight: 700;
+  }
+}
+
+// ─── Conteúdo das abas ─────────────────────────────────────────────────────
+.aba-content { display: flex; flex-direction: column; gap: 1rem; }
+
+// ─── Caixa diário ──────────────────────────────────────────────────────────
+.caixa-header {
+  display: flex;
+  align-items: flex-end;
+  gap: 1rem;
+}
+
+.caixa-cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.85rem;
+}
+
+.caixa-card {
+  padding: 1rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+
+  &.entrada { border-left: 4px solid #22c55e; }
+  &.saida   { border-left: 4px solid #f87171; }
+  &.saldo-dia { border-left: 4px solid var(--teal-600); }
+  &.negativo  { border-left-color: #f87171; }
+}
+
+.caixa-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+}
+
+.caixa-valor {
+  font-family: 'Fraunces', Georgia, serif;
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--teal-900);
+}
+
+// ─── Lançamentos ───────────────────────────────────────────────────────────
+.toolbar-lancamentos {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.filtros-card {
+  padding: 1rem 1.25rem;
+}
+
+.filtros-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.85rem;
+  align-items: flex-end;
+}
+
+.filtro-total {
+  margin: 0.65rem 0 0;
+  font-size: 0.875rem;
+  color: var(--muted);
+}
+
+// ─── Formulário ────────────────────────────────────────────────────────────
+.form-card {
+  padding: 1.25rem;
+
+  h3 {
+    margin: 0 0 1rem;
+    font-family: 'Fraunces', Georgia, serif;
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--teal-900);
+    padding-bottom: 0.65rem;
+    border-bottom: 1px solid var(--line);
+  }
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.85rem;
+}
+
+.field-span { grid-column: 1 / -1; }
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.field-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+}
+
+.field-error { font-size: 0.75rem; color: #dc2626; }
+
+select, input[type="text"], input[type="number"], input[type="date"], textarea {
+  font: inherit;
+  font-size: 0.875rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: 0.6rem;
+  background: #f8fafc;
+  color: var(--ink);
+  width: 100%;
+  outline: none;
+  transition: border-color 0.12s, box-shadow 0.12s;
+
+  &:focus {
+    border-color: var(--teal-600);
+    box-shadow: 0 0 0 3px rgba(13,148,136,.15);
+    background: #fff;
+  }
+}
+
+textarea { resize: vertical; min-height: 60px; }
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.65rem;
+  margin-top: 1rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--line);
+}
+
+// ─── Tabela ────────────────────────────────────────────────────────────────
+.table-card {
+  padding: 1.1rem;
+
+  h3 {
+    margin: 0 0 0.85rem;
+    font-family: 'Fraunces', Georgia, serif;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--teal-900);
+  }
+}
+
+.section-hint { margin: -0.5rem 0 1rem; font-size: 0.82rem; color: var(--muted); }
+
+.table-wrap { overflow-x: auto; }
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+th, td {
+  padding: 0.6rem 0.55rem;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  vertical-align: middle;
+}
+
+th {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.col-valor { text-align: right; white-space: nowrap; }
+.desc-cell { max-width: 200px; }
+
+.valor-positivo { color: #16a34a; font-weight: 600; }
+.valor-negativo { color: #dc2626; font-weight: 600; }
+
+.vencido { color: #dc2626; font-weight: 600; }
+
+.row-receita { background: #f0fdf4; }
+.row-despesa { background: #fff5f5; }
+
+.empty-row { text-align: center; color: var(--muted); padding: 1.5rem 0; }
+.empty-info { color: var(--muted); font-size: 0.875rem; margin: 0.5rem 0; }
+
+// ─── Pills ─────────────────────────────────────────────────────────────────
+.tipo-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  white-space: nowrap;
+
+  &.receita { background: #d1fae5; color: #065f46; }
+  &.despesa { background: #fee2e2; color: #991b1b; }
+}
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: capitalize;
+
+  &.pago     { background: #d1fae5; color: #065f46; border: 1px solid #6ee7b7; }
+  &.pendente { background: #fef9c3; color: #713f12; border: 1px solid #fde047; }
+  &.cancelado{ background: #f1f5f9; color: var(--muted); border: 1px solid var(--line); }
+}
+
+// ─── Ações ─────────────────────────────────────────────────────────────────
+.actions { white-space: nowrap; }
+
+.table-btn {
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.25rem 0.6rem;
+  border-radius: 0.45rem;
+  border: 1px solid var(--line);
+  background: #fff;
+  color: var(--ink);
+  cursor: pointer;
+  margin-right: 0.3rem;
+  transition: background 0.1s;
+
+  &:hover { background: #f8fafc; }
+  &.success { color: #16a34a; border-color: #86efac; background: #f0fdf4; }
+  &.danger  { color: #dc2626; border-color: #fca5a5; }
+}
+
+// ─── Botões ────────────────────────────────────────────────────────────────
+.btn {
+  font: inherit;
+  font-weight: 600;
+  font-size: 0.875rem;
+  padding: 0.6rem 1.2rem;
+  border-radius: 0.65rem;
+  cursor: pointer;
+  border: none;
+  transition: background 0.12s;
+}
+
+.btn-primary {
+  color: #fff;
+  background: linear-gradient(135deg, var(--teal-600), #0f766e);
+  &:hover { background: linear-gradient(135deg, #0f766e, var(--teal-900)); }
+}
+
+.btn-secondary {
+  color: var(--teal-700);
+  background: #f0fdf4;
+  border: 1px solid #6ee7b7;
+  &:hover { background: #d1fae5; }
+}
+
+// ─── Formas de pagamento ───────────────────────────────────────────────────
+.formas-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  margin-bottom: 1rem;
+}
+
+.forma-item {
+  display: grid;
+  grid-template-columns: 200px 1fr 160px;
+  align-items: center;
+  gap: 1rem;
+}
+
+.forma-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.forma-nome { font-size: 0.875rem; font-weight: 600; color: var(--ink); }
+.forma-qtd  { font-size: 0.75rem; color: var(--muted); }
+
+.forma-barra-wrap {
+  height: 8px;
+  background: #f1f5f9;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.forma-barra {
+  height: 100%;
+  background: linear-gradient(90deg, var(--teal-600), var(--teal-900));
+  border-radius: 999px;
+  transition: width 0.3s ease;
+  min-width: 4px;
+}
+
+.forma-valores {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.1rem;
+}
+
+.forma-pct   { font-size: 0.75rem; color: var(--muted); }
+.forma-total { font-size: 0.875rem; font-weight: 700; color: var(--teal-700); }
+
+.formas-total {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--line);
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.forma-total-geral {
+  font-family: 'Fraunces', Georgia, serif;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--teal-900);
+}
+
+// ─── Relatório ─────────────────────────────────────────────────────────────
+.relatorio-filtros {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  padding: 1rem 1.25rem;
+}
+
+.relatorio-kpis {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.85rem;
+}
+
+.kpi-card {
+  padding: 1rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.kpi-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+}
+
+.kpi-valor {
+  font-family: 'Fraunces', Georgia, serif;
+  font-size: 1.25rem;
+  font-weight: 700;
+
+  &.receita  { color: #16a34a; }
+  &.despesa  { color: #dc2626; }
+  &.pendente { color: #d97706; }
+}
+
+.relatorio-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+}
+
+// ─── Modal ─────────────────────────────────────────────────────────────────
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15,23,42,.45);
+  z-index: 100;
+}
+
+.modal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 101;
+  width: min(480px, 95vw);
+  max-height: 90dvh;
+  overflow-y: auto;
+}
+
+.modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--line);
+
+  h3 { margin: 0; font-family: 'Fraunces', Georgia, serif; font-size: 1.05rem; font-weight: 700; color: var(--teal-900); }
+}
+
+.modal-close {
+  font: inherit;
+  font-size: 1.25rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--muted);
+  line-height: 1;
+  padding: 0.2rem 0.4rem;
+  border-radius: 0.4rem;
+  &:hover { background: #f1f5f9; }
+}
+
+.modal-content { padding: 1.25rem; }
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.65rem;
+  margin-top: 1rem;
+}
+
+.btn-modal {
+  font: inherit;
+  font-weight: 600;
+  font-size: 0.875rem;
+  padding: 0.55rem 1.1rem;
+  border-radius: 0.65rem;
+  cursor: pointer;
+  border: none;
+  transition: background 0.12s;
+}
+
+.btn-modal.btn-primary {
+  color: #fff;
+  background: linear-gradient(135deg, var(--teal-600), #0f766e);
+  &:hover { background: linear-gradient(135deg, #0f766e, var(--teal-900)); }
+}
+
+.btn-modal.btn-secondary {
+  color: var(--teal-700);
+  background: #f0fdf4;
+  border: 1px solid #6ee7b7;
+  &:hover { background: #d1fae5; }
+}
+
+.quitar-dl {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.65rem 1rem;
+  margin: 0 0 1rem;
+
+  div { display: flex; flex-direction: column; gap: 0.1rem; }
+  dt { font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }
+  dd { margin: 0; font-size: 0.875rem; font-weight: 500; }
+}
+
+.valor-destaque { font-size: 1.1rem; font-weight: 700; color: var(--teal-700); }
+
+// ─── Alertas ───────────────────────────────────────────────────────────────
+.alert {
+  padding: 0.75rem 1rem;
+  border-radius: 0.65rem;
+  font-size: 0.875rem;
+
+  &-sucesso { background: #d1fae5; color: #065f46; border: 1px solid #6ee7b7; }
+  &-erro    { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
+}
+
+// ─── Responsivo ────────────────────────────────────────────────────────────
+@media (max-width: 1024px) {
+  .resumo-cards    { grid-template-columns: repeat(2, 1fr); }
+  .relatorio-kpis  { grid-template-columns: repeat(2, 1fr); }
+  .relatorio-grid  { grid-template-columns: 1fr; }
+  .forma-item      { grid-template-columns: 160px 1fr 120px; }
+}
+
+@media (max-width: 768px) {
+  .caixa-cards     { grid-template-columns: 1fr; }
+  .form-grid       { grid-template-columns: 1fr; }
+  .field-span      { grid-column: auto; }
+  .filtros-row     { flex-direction: column; }
+  .forma-item      { grid-template-columns: 1fr 1fr; .forma-barra-wrap { display: none; } }
+}
+
+@media (max-width: 480px) {
+  .resumo-cards   { grid-template-columns: 1fr; }
+  .relatorio-kpis { grid-template-columns: 1fr; }
+  .abas           { gap: 0.2rem; .aba { font-size: 0.78rem; padding: 0.45rem 0.7rem; } }
+}

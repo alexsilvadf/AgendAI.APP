@@ -1,0 +1,150 @@
+@if (paciente(); as p) {
+  <div class="ficha-page">
+
+    <header class="page-header">
+      <button type="button" class="btn-back" (click)="voltar()">← Voltar</button>
+      <div class="header-info">
+        <div class="avatar" aria-hidden="true">
+          {{ p.nome.charAt(0).toUpperCase() }}
+        </div>
+        <div>
+          <h1>{{ p.nome }}</h1>
+          <p>
+            {{ calcularIdade(p.dataNascimento) }} anos ·
+            {{ sexoLabels[p.sexo] }} ·
+            {{ p.tipoSanguineo === 'nao_informado' ? 'Tipo sanguíneo não informado' : p.tipoSanguineo }}
+          </p>
+        </div>
+      </div>
+      <div class="header-actions">
+        <span class="status-pill" [class.inativo]="!p.ativo">
+          {{ p.ativo ? 'Ativo' : 'Inativo' }}
+        </span>
+        <button type="button" class="btn btn-primary" (click)="editar()">Editar paciente</button>
+      </div>
+    </header>
+
+    <div class="ficha-grid">
+
+      <!-- Dados pessoais -->
+      <section class="card section-card">
+        <h2 class="section-title">Dados pessoais</h2>
+        <dl class="data-list">
+          <div><dt>CPF</dt><dd class="mono">{{ p.cpf }}</dd></div>
+          <div><dt>Data de nascimento</dt><dd>{{ formatarData(p.dataNascimento) }}</dd></div>
+          <div><dt>Estado civil</dt><dd>{{ estadoCivilLabels[p.estadoCivil] }}</dd></div>
+          <div><dt>Telefone</dt><dd>{{ p.telefone }}</dd></div>
+          <div><dt>E-mail</dt><dd>{{ p.email || '—' }}</dd></div>
+          <div><dt>Cadastrado em</dt><dd>{{ formatarData(p.criadoEm) }}</dd></div>
+        </dl>
+      </section>
+
+      <!-- Endereço -->
+      <section class="card section-card">
+        <h2 class="section-title">Endereço</h2>
+        @if (p.logradouro) {
+          <dl class="data-list">
+            <div><dt>Logradouro</dt><dd>{{ p.logradouro }}, {{ p.numero }} {{ p.complemento }}</dd></div>
+            <div><dt>Bairro</dt><dd>{{ p.bairro }}</dd></div>
+            <div><dt>Cidade / UF</dt><dd>{{ p.cidade }} — {{ p.uf }}</dd></div>
+            <div><dt>CEP</dt><dd>{{ p.cep }}</dd></div>
+          </dl>
+        } @else {
+          <p class="empty-info">Endereço não informado.</p>
+        }
+      </section>
+
+      <!-- Anamnese -->
+      <section class="card section-card section-full">
+        <h2 class="section-title">Anamnese — Ficha de saúde</h2>
+        <div class="anamnese-grid">
+          <div class="anamnese-item" [class.positivo]="p.anamnese.temDoencaCardiaca">
+            <span class="anamnese-icon">{{ p.anamnese.temDoencaCardiaca ? '⚠️' : '✓' }}</span>
+            <span>Doença cardíaca: <strong>{{ sim(p.anamnese.temDoencaCardiaca) }}</strong></span>
+          </div>
+          <div class="anamnese-item" [class.positivo]="p.anamnese.temDiabetes">
+            <span class="anamnese-icon">{{ p.anamnese.temDiabetes ? '⚠️' : '✓' }}</span>
+            <span>Diabetes: <strong>{{ sim(p.anamnese.temDiabetes) }}</strong></span>
+          </div>
+          <div class="anamnese-item" [class.positivo]="p.anamnese.temHipertensao">
+            <span class="anamnese-icon">{{ p.anamnese.temHipertensao ? '⚠️' : '✓' }}</span>
+            <span>Hipertensão: <strong>{{ sim(p.anamnese.temHipertensao) }}</strong></span>
+          </div>
+          <div class="anamnese-item" [class.positivo]="p.anamnese.temCoagulopatia">
+            <span class="anamnese-icon">{{ p.anamnese.temCoagulopatia ? '⚠️' : '✓' }}</span>
+            <span>Coagulopatia: <strong>{{ sim(p.anamnese.temCoagulopatia) }}</strong></span>
+          </div>
+          <div class="anamnese-item" [class.positivo]="p.anamnese.estaGravida">
+            <span class="anamnese-icon">{{ p.anamnese.estaGravida ? '⚠️' : '✓' }}</span>
+            <span>Gestante: <strong>{{ sim(p.anamnese.estaGravida) }}</strong></span>
+          </div>
+          <div class="anamnese-item" [class.positivo]="p.anamnese.fumante">
+            <span class="anamnese-icon">{{ p.anamnese.fumante ? '⚠️' : '✓' }}</span>
+            <span>Fumante: <strong>{{ sim(p.anamnese.fumante) }}</strong></span>
+          </div>
+        </div>
+
+        @if (p.anamnese.temAlergiaMedicamento) {
+          <div class="alerta-box">
+            <strong>⚠️ Alergia a medicamento:</strong> {{ p.anamnese.alergiaMedicamentoDesc || 'Não especificado' }}
+          </div>
+        }
+        @if (p.anamnese.temAlergiaMaterial) {
+          <div class="alerta-box">
+            <strong>⚠️ Alergia a material:</strong> {{ p.anamnese.alergiaMaterialDesc || 'Não especificado' }}
+          </div>
+        }
+        @if (p.anamnese.usaMedicamentoContinuo) {
+          <div class="info-box">
+            <strong>💊 Medicamento contínuo:</strong> {{ p.anamnese.medicamentoContinuoDesc || 'Não especificado' }}
+          </div>
+        }
+        @if (p.anamnese.observacoesGerais) {
+          <div class="obs-box">
+            <strong>Observações:</strong> {{ p.anamnese.observacoesGerais }}
+          </div>
+        }
+      </section>
+
+      <!-- Histórico clínico -->
+      <section class="card section-card section-full">
+        <h2 class="section-title">Histórico clínico</h2>
+        @if (p.historico.length > 0) {
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Data</th>
+                  <th>Procedimento</th>
+                  <th>Profissional</th>
+                  <th>Observações</th>
+                  <th>Valor</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (h of p.historico; track h.id) {
+                  <tr>
+                    <td>{{ formatarData(h.data) }}</td>
+                    <td>{{ h.procedimento }}</td>
+                    <td>{{ h.profissional }}</td>
+                    <td class="obs-cell">{{ h.observacoes || '—' }}</td>
+                    <td>{{ formatarMoeda(h.valor) }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        } @else {
+          <p class="empty-info">Nenhum atendimento registrado ainda.</p>
+        }
+      </section>
+
+    </div>
+  </div>
+
+} @else {
+  <div class="not-found">
+    <p>Paciente não encontrado.</p>
+    <button type="button" class="btn btn-primary" (click)="voltar()">Voltar para pacientes</button>
+  </div>
+}

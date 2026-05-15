@@ -1,0 +1,122 @@
+@if (isAuthenticated()) {
+  <nav class="navbar" [class.menu-open]="menuOpen()" aria-label="Navegação principal">
+
+    <!-- Brand -->
+    <a routerLink="/agenda" class="navbar-brand" aria-label="AgendAi — ir para a agenda" (click)="closeMenu()">
+      <span class="badge">AgendAi</span>
+    </a>
+
+    <!-- Desktop: links centrais -->
+    <div class="navbar-links" role="list">
+      @if (podeVerAgenda()) {
+        <a routerLink="/agenda" class="nav-link" routerLinkActive="nav-link--active" role="listitem">Agenda</a>
+      }
+      @if (podeAgendar()) {
+        <a routerLink="/agendar-consulta" class="nav-link" routerLinkActive="nav-link--active" role="listitem">Agendar consulta</a>
+      }
+      @if (podeAtender()) {
+        <a routerLink="/atendimento" class="nav-link" routerLinkActive="nav-link--active" role="listitem">Atendimento</a>
+      }
+      @if (podeVerPacientes()) {
+        <a routerLink="/pacientes" class="nav-link" routerLinkActive="nav-link--active" role="listitem">Pacientes</a>
+      }
+      @if (podeVerProcedimentos()) {
+        <a routerLink="/procedimentos" class="nav-link" routerLinkActive="nav-link--active" role="listitem">Procedimentos</a>
+      }
+      @if (podeVerUsuarios()) {
+        <a routerLink="/usuarios" class="nav-link" routerLinkActive="nav-link--active" role="listitem">Usuários</a>
+      }
+      @if (podeVerFinanceiro()) {
+        <a routerLink="/financeiro" class="nav-link" routerLinkActive="nav-link--active" role="listitem">Financeiro</a>
+      }
+    </div>
+
+    <!-- Desktop: usuário + sair -->
+    <div class="navbar-user">
+      @if (usuario(); as u) {
+        <span class="user-pill" title="Usuário logado">
+          <span class="user-icon" aria-hidden="true">👤</span>
+          <span class="user-info">
+            <span class="user-name">{{ u }}</span>
+            @if (roleLabel(); as rl) {
+              <span class="user-role">{{ rl }}</span>
+            }
+          </span>
+        </span>
+      }
+      <button type="button" class="btn-logout" (click)="logout()">Sair</button>
+    </div>
+
+    <!-- Botão hamburguer (mobile) -->
+    <button
+      type="button"
+      class="hamburger"
+      (click)="toggleMenu()"
+      [attr.aria-expanded]="menuOpen()"
+      aria-controls="mobile-menu"
+      aria-label="Abrir menu"
+    >
+      <span class="bar"></span>
+      <span class="bar"></span>
+      <span class="bar"></span>
+    </button>
+  </nav>
+
+  <!-- Drawer mobile -->
+  @if (menuOpen()) {
+    <div class="mobile-backdrop" (click)="closeMenu()" aria-hidden="true"></div>
+    <div class="mobile-menu" id="mobile-menu" role="dialog" aria-label="Menu de navegação">
+      @if (usuario(); as u) {
+        <div class="mobile-user">
+          <span class="user-icon" aria-hidden="true">👤</span>
+          <div class="mobile-user-info">
+            <span class="mobile-username">{{ u }}</span>
+            @if (roleLabel(); as rl) {
+              <span class="mobile-role">{{ rl }}</span>
+            }
+          </div>
+        </div>
+      }
+      <nav aria-label="Links de navegação">
+        @if (podeVerAgenda()) {
+          <a routerLink="/agenda" class="mobile-link" routerLinkActive="mobile-link--active" (click)="closeMenu()">
+            Agenda
+          </a>
+        }
+        @if (podeAgendar()) {
+          <a routerLink="/agendar-consulta" class="mobile-link" routerLinkActive="mobile-link--active" (click)="closeMenu()">
+            Agendar consulta
+          </a>
+        }
+        @if (podeAtender()) {
+          <a routerLink="/atendimento" class="mobile-link" routerLinkActive="mobile-link--active" (click)="closeMenu()">
+            Atendimento
+          </a>
+        }
+        @if (podeVerPacientes()) {
+          <a routerLink="/pacientes" class="mobile-link" routerLinkActive="mobile-link--active" (click)="closeMenu()">
+            Pacientes
+          </a>
+        }
+        @if (podeVerProcedimentos()) {
+          <a routerLink="/procedimentos" class="mobile-link" routerLinkActive="mobile-link--active" (click)="closeMenu()">
+            Procedimentos
+          </a>
+        }
+        @if (podeVerUsuarios()) {
+          <a routerLink="/usuarios" class="mobile-link" routerLinkActive="mobile-link--active" (click)="closeMenu()">
+            Usuários
+          </a>
+        }
+        @if (podeVerFinanceiro()) {
+          <a routerLink="/financeiro" class="mobile-link" routerLinkActive="mobile-link--active" (click)="closeMenu()">
+            Financeiro
+          </a>
+        }
+      </nav>
+      <div class="mobile-footer">
+        <button type="button" class="btn-logout-mobile" (click)="logout()">Sair</button>
+      </div>
+    </div>
+  }
+}

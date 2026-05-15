@@ -1,0 +1,24 @@
+<div class="recover-page">
+  <div class="recover-card">
+    <a routerLink="/login" class="back-link">← Voltar ao login</a>
+    <h1>Recuperar senha</h1>
+    <p>Informe o e-mail cadastrado. Enviaremos instruções para redefinir sua senha.</p>
+
+    <form [formGroup]="form" (ngSubmit)="enviar()" novalidate>
+      <label class="field">
+        <span class="field-label">E-mail</span>
+        <input
+          type="email"
+          formControlName="email"
+          autocomplete="email"
+          placeholder="nome@clinica.com.br"
+          [attr.aria-invalid]="form.controls.email.invalid && form.controls.email.touched"
+        />
+        @if (form.controls.email.invalid && form.controls.email.touched) {
+          <span class="field-error">Informe um e-mail válido.</span>
+        }
+      </label>
+      <button type="submit" class="btn-submit">Enviar instruções</button>
+    </form>
+  </div>
+</div>

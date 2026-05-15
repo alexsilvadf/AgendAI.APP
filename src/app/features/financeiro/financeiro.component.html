@@ -1,0 +1,467 @@
+<div class="financeiro-page">
+
+  <!-- ─── Header ──────────────────────────────────────────────────────── -->
+  <header class="page-header">
+    <div class="brand-text">
+      <h1>Financeiro</h1>
+      <p>Controle de caixa, lançamentos e relatórios da clínica.</p>
+    </div>
+  </header>
+
+  <!-- ─── Cards de resumo ───────────────────────────────────────────────── -->
+  @let res = resumoGeral();
+  <section class="resumo-cards" aria-label="Resumo financeiro">
+    <article class="resumo-card card receita">
+      <span class="resumo-icon" aria-hidden="true">↑</span>
+      <div>
+        <span class="resumo-label">Total recebido</span>
+        <span class="resumo-valor">{{ formatarMoeda(res.totalReceitas) }}</span>
+      </div>
+    </article>
+    <article class="resumo-card card despesa">
+      <span class="resumo-icon" aria-hidden="true">↓</span>
+      <div>
+        <span class="resumo-label">Total pago</span>
+        <span class="resumo-valor">{{ formatarMoeda(res.totalDespesas) }}</span>
+      </div>
+    </article>
+    <article class="resumo-card card saldo" [class.negativo]="res.saldoLiquido < 0">
+      <span class="resumo-icon" aria-hidden="true">≡</span>
+      <div>
+        <span class="resumo-label">Saldo líquido</span>
+        <span class="resumo-valor">{{ formatarMoeda(res.saldoLiquido) }}</span>
+      </div>
+    </article>
+    <article class="resumo-card card pendente">
+      <span class="resumo-icon" aria-hidden="true">⏳</span>
+      <div>
+        <span class="resumo-label">A receber / pagar</span>
+        <span class="resumo-valor">{{ formatarMoeda(res.totalPendente) }}</span>
+      </div>
+    </article>
+  </section>
+
+  <!-- ─── Abas ──────────────────────────────────────────────────────────── -->
+  <nav class="abas" aria-label="Seções do financeiro">
+    <button type="button" class="aba" [class.aba--active]="abaAtiva() === 'caixa'"      (click)="abaAtiva.set('caixa')">      💰 Caixa diário</button>
+    <button type="button" class="aba" [class.aba--active]="abaAtiva() === 'lancamentos'" (click)="abaAtiva.set('lancamentos')">📋 Lançamentos</button>
+    <button type="button" class="aba" [class.aba--active]="abaAtiva() === 'formas'"      (click)="abaAtiva.set('formas')">     💳 Formas de pagamento</button>
+    <button type="button" class="aba" [class.aba--active]="abaAtiva() === 'relatorio'"   (click)="abaAtiva.set('relatorio')">  📊 Relatórios</button>
+  </nav>
+
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <!-- ABA: CAIXA DIÁRIO                                                   -->
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  @if (abaAtiva() === 'caixa') {
+    <section class="aba-content" aria-label="Caixa diário">
+
+      <div class="caixa-header">
+        <label class="field">
+          <span class="field-label">Data</span>
+          <input type="date" [value]="dataCaixa()" (change)="dataCaixa.set($any($event.target).value)" />
+        </label>
+      </div>
+
+      @let cx = caixaDiario();
+      <div class="caixa-cards">
+        <div class="caixa-card card entrada">
+          <span class="caixa-label">Entradas</span>
+          <span class="caixa-valor">{{ formatarMoeda(cx.receitas) }}</span>
+        </div>
+        <div class="caixa-card card saida">
+          <span class="caixa-label">Saídas</span>
+          <span class="caixa-valor">{{ formatarMoeda(cx.despesas) }}</span>
+        </div>
+        <div class="caixa-card card saldo-dia" [class.negativo]="cx.saldo < 0">
+          <span class="caixa-label">Saldo do dia</span>
+          <span class="caixa-valor">{{ formatarMoeda(cx.saldo) }}</span>
+        </div>
+      </div>
+
+      <div class="card table-card">
+        <h3>Movimentações do dia</h3>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Tipo</th>
+                <th>Descrição</th>
+                <th>Paciente</th>
+                <th>Forma pgto.</th>
+                <th>Status</th>
+                <th class="col-valor">Valor</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (l of lancamentosDoDia(); track l.id) {
+                <tr [class.row-receita]="l.tipo === 'receita'" [class.row-despesa]="l.tipo === 'despesa'">
+                  <td>
+                    <span class="tipo-pill" [class.receita]="l.tipo === 'receita'" [class.despesa]="l.tipo === 'despesa'">
+                      {{ l.tipo === 'receita' ? '↑ Receita' : '↓ Despesa' }}
+                    </span>
+                  </td>
+                  <td>{{ l.descricao }}</td>
+                  <td>{{ l.paciente ?? '—' }}</td>
+                  <td>{{ labelFormaPagamento(l.formaPagamento) }}</td>
+                  <td><span class="status-pill" [class.pago]="l.status === 'pago'" [class.pendente]="l.status === 'pendente'" [class.cancelado]="l.status === 'cancelado'">{{ l.status }}</span></td>
+                  <td class="col-valor" [class.valor-positivo]="l.tipo === 'receita'" [class.valor-negativo]="l.tipo === 'despesa'">
+                    {{ l.tipo === 'receita' ? '+' : '-' }}{{ formatarMoeda(l.valor) }}
+                  </td>
+                </tr>
+              } @empty {
+                <tr><td colspan="6" class="empty-row">Nenhuma movimentação nesta data.</td></tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  }
+
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <!-- ABA: LANÇAMENTOS                                                    -->
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  @if (abaAtiva() === 'lancamentos') {
+    <section class="aba-content" aria-label="Lançamentos">
+
+      @if (mensagem(); as msg) {
+        <div class="alert" [class.alert-sucesso]="msg.tipo === 'sucesso'" [class.alert-erro]="msg.tipo === 'erro'">
+          {{ msg.texto }}
+        </div>
+      }
+
+      <!-- Formulário -->
+      @if (mostrarFormLancamento()) {
+        <div class="card form-card">
+          <h3>{{ editandoId() ? 'Editar lançamento' : 'Novo lançamento' }}</h3>
+          <form [formGroup]="formLancamento" (ngSubmit)="salvarLancamento()" novalidate>
+            <div class="form-grid">
+
+              <label class="field">
+                <span class="field-label">Tipo</span>
+                <select formControlName="tipo">
+                  <option value="receita">Receita</option>
+                  <option value="despesa">Despesa</option>
+                </select>
+              </label>
+
+              <label class="field">
+                <span class="field-label">Categoria</span>
+                <select formControlName="categoria">
+                  @for (c of categoriasDespesa; track c.value) {
+                    <option [value]="c.value">{{ c.label }}</option>
+                  }
+                </select>
+              </label>
+
+              <label class="field field-span">
+                <span class="field-label">Descrição</span>
+                <input type="text" formControlName="descricao" placeholder="Ex.: Aluguel sala clínica" />
+                @if (formLancamento.controls.descricao.invalid && formLancamento.controls.descricao.touched) {
+                  <span class="field-error">Informe a descrição.</span>
+                }
+              </label>
+
+              <label class="field">
+                <span class="field-label">Valor (R$)</span>
+                <input type="number" formControlName="valor" min="0.01" step="0.01" />
+                @if (formLancamento.controls.valor.invalid && formLancamento.controls.valor.touched) {
+                  <span class="field-error">Informe um valor válido.</span>
+                }
+              </label>
+
+              <label class="field">
+                <span class="field-label">Forma de pagamento</span>
+                <select formControlName="formaPagamento">
+                  <option value="">Não informado</option>
+                  @for (fp of formasPagamento; track fp.value) {
+                    <option [value]="fp.value">{{ fp.label }}</option>
+                  }
+                </select>
+              </label>
+
+              <label class="field">
+                <span class="field-label">Data</span>
+                <input type="date" formControlName="data" />
+              </label>
+
+              <label class="field">
+                <span class="field-label">Vencimento</span>
+                <input type="date" formControlName="vencimento" />
+              </label>
+
+              <label class="field field-span">
+                <span class="field-label">Observações</span>
+                <textarea formControlName="observacoes" rows="2" placeholder="Observações opcionais..."></textarea>
+              </label>
+            </div>
+
+            <div class="form-actions">
+              <button type="button" class="btn btn-secondary" (click)="cancelarFormLancamento()">Cancelar</button>
+              <button type="submit" class="btn btn-primary">{{ editandoId() ? 'Salvar alterações' : 'Criar lançamento' }}</button>
+            </div>
+          </form>
+        </div>
+      } @else {
+        <div class="toolbar-lancamentos">
+          <button type="button" class="btn btn-primary" (click)="mostrarFormLancamento.set(true)">+ Novo lançamento</button>
+        </div>
+      }
+
+      <!-- Filtros -->
+      <div class="card filtros-card">
+        <div class="filtros-row">
+          <label class="field">
+            <span class="field-label">Tipo</span>
+            <select [value]="filtroTipo()" (change)="filtroTipo.set($any($event.target).value)">
+              <option value="todos">Todos</option>
+              <option value="receita">Receitas</option>
+              <option value="despesa">Despesas</option>
+            </select>
+          </label>
+          <label class="field">
+            <span class="field-label">Status</span>
+            <select [value]="filtroStatus()" (change)="filtroStatus.set($any($event.target).value)">
+              <option value="todos">Todos</option>
+              <option value="pendente">Pendente</option>
+              <option value="pago">Pago</option>
+              <option value="cancelado">Cancelado</option>
+            </select>
+          </label>
+          <label class="field">
+            <span class="field-label">De</span>
+            <input type="date" [value]="filtroPeriodoInicio()" (change)="filtroPeriodoInicio.set($any($event.target).value)" />
+          </label>
+          <label class="field">
+            <span class="field-label">Até</span>
+            <input type="date" [value]="filtroPeriodoFim()" (change)="filtroPeriodoFim.set($any($event.target).value)" />
+          </label>
+        </div>
+        <p class="filtro-total">
+          {{ lancamentosFiltrados().length }} lançamento(s) · Saldo: <strong>{{ formatarMoeda(totalFiltrado()) }}</strong>
+        </p>
+      </div>
+
+      <!-- Tabela -->
+      <div class="card table-card">
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Data</th>
+                <th>Tipo</th>
+                <th>Descrição</th>
+                <th>Paciente</th>
+                <th>Categoria</th>
+                <th>Forma pgto.</th>
+                <th>Vencimento</th>
+                <th>Status</th>
+                <th class="col-valor">Valor</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (l of lancamentosFiltrados(); track l.id) {
+                <tr>
+                  <td>{{ formatarData(l.data) }}</td>
+                  <td>
+                    <span class="tipo-pill" [class.receita]="l.tipo === 'receita'" [class.despesa]="l.tipo === 'despesa'">
+                      {{ l.tipo === 'receita' ? '↑ Receita' : '↓ Despesa' }}
+                    </span>
+                  </td>
+                  <td class="desc-cell">{{ l.descricao }}</td>
+                  <td>{{ l.paciente ?? '—' }}</td>
+                  <td>{{ labelCategoria(l.categoria) }}</td>
+                  <td>{{ labelFormaPagamento(l.formaPagamento) }}</td>
+                  <td [class.vencido]="l.status === 'pendente' && l.vencimento < dataCaixa()">
+                    {{ formatarData(l.vencimento) }}
+                  </td>
+                  <td>
+                    <span class="status-pill" [class.pago]="l.status === 'pago'" [class.pendente]="l.status === 'pendente'" [class.cancelado]="l.status === 'cancelado'">
+                      {{ l.status }}
+                    </span>
+                  </td>
+                  <td class="col-valor" [class.valor-positivo]="l.tipo === 'receita'" [class.valor-negativo]="l.tipo === 'despesa'">
+                    {{ formatarMoeda(l.valor) }}
+                  </td>
+                  <td class="actions">
+                    @if (l.status === 'pendente') {
+                      <button type="button" class="table-btn success" (click)="quitarLancamento(l)" title="Registrar pagamento">✓ Quitar</button>
+                    }
+                    @if (!l.atendimentoId) {
+                      <button type="button" class="table-btn" (click)="editarLancamento(l)">Editar</button>
+                      <button type="button" class="table-btn danger" (click)="excluirLancamento(l.id)">Excluir</button>
+                    }
+                  </td>
+                </tr>
+              } @empty {
+                <tr><td colspan="10" class="empty-row">Nenhum lançamento encontrado para os filtros selecionados.</td></tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  }
+
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <!-- ABA: FORMAS DE PAGAMENTO                                            -->
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  @if (abaAtiva() === 'formas') {
+    <section class="aba-content" aria-label="Formas de pagamento">
+      <div class="card table-card">
+        <h3>Distribuição por forma de pagamento</h3>
+        <p class="section-hint">Baseado nas receitas pagas registradas no sistema.</p>
+
+        @if (distribuicaoFormas().length > 0) {
+          <div class="formas-lista">
+            @for (f of distribuicaoFormas(); track f.forma) {
+              <div class="forma-item">
+                <div class="forma-info">
+                  <span class="forma-nome">{{ f.forma }}</span>
+                  <span class="forma-qtd">{{ f.quantidade }} atendimento(s)</span>
+                </div>
+                <div class="forma-barra-wrap">
+                  <div class="forma-barra" [style.width]="porcentagem(f.total, totalFormas())"></div>
+                </div>
+                <div class="forma-valores">
+                  <span class="forma-pct">{{ porcentagem(f.total, totalFormas()) }}</span>
+                  <span class="forma-total">{{ formatarMoeda(f.total) }}</span>
+                </div>
+              </div>
+            }
+          </div>
+
+          <div class="formas-total">
+            <span>Total geral</span>
+            <span class="forma-total-geral">{{ formatarMoeda(totalFormas()) }}</span>
+          </div>
+        } @else {
+          <p class="empty-info">Nenhuma receita paga registrada ainda.</p>
+        }
+      </div>
+    </section>
+  }
+
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <!-- ABA: RELATÓRIOS                                                     -->
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  @if (abaAtiva() === 'relatorio') {
+    <section class="aba-content" aria-label="Relatórios financeiros">
+
+      <div class="relatorio-filtros card">
+        <label class="field">
+          <span class="field-label">Período — de</span>
+          <input type="date" [value]="relatorioInicio()" (change)="relatorioInicio.set($any($event.target).value)" />
+        </label>
+        <label class="field">
+          <span class="field-label">Até</span>
+          <input type="date" [value]="relatorioFim()" (change)="relatorioFim.set($any($event.target).value)" />
+        </label>
+      </div>
+
+      @let rel = dadosRelatorio();
+
+      <!-- KPIs do período -->
+      <div class="relatorio-kpis">
+        <div class="kpi-card card">
+          <span class="kpi-label">Receitas</span>
+          <span class="kpi-valor receita">{{ formatarMoeda(rel.receitas) }}</span>
+        </div>
+        <div class="kpi-card card">
+          <span class="kpi-label">Despesas</span>
+          <span class="kpi-valor despesa">{{ formatarMoeda(rel.despesas) }}</span>
+        </div>
+        <div class="kpi-card card" [class.negativo]="rel.saldo < 0">
+          <span class="kpi-label">Resultado</span>
+          <span class="kpi-valor" [class.receita]="rel.saldo >= 0" [class.despesa]="rel.saldo < 0">{{ formatarMoeda(rel.saldo) }}</span>
+        </div>
+        <div class="kpi-card card">
+          <span class="kpi-label">Pendentes</span>
+          <span class="kpi-valor pendente">{{ formatarMoeda(rel.pendentes) }}</span>
+        </div>
+      </div>
+
+      <div class="relatorio-grid">
+
+        <!-- Receitas por profissional -->
+        <div class="card table-card">
+          <h3>Receitas por profissional</h3>
+          @if (rel.porProfissional.length > 0) {
+            <table>
+              <thead><tr><th>Profissional</th><th class="col-valor">Total</th></tr></thead>
+              <tbody>
+                @for (p of rel.porProfissional; track p.nome) {
+                  <tr>
+                    <td>{{ p.nome }}</td>
+                    <td class="col-valor valor-positivo">{{ formatarMoeda(p.total) }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          } @else {
+            <p class="empty-info">Sem dados no período.</p>
+          }
+        </div>
+
+        <!-- Despesas por categoria -->
+        <div class="card table-card">
+          <h3>Despesas por categoria</h3>
+          @if (rel.porCategoria.length > 0) {
+            <table>
+              <thead><tr><th>Categoria</th><th class="col-valor">Total</th></tr></thead>
+              <tbody>
+                @for (c of rel.porCategoria; track c.cat) {
+                  <tr>
+                    <td>{{ c.cat }}</td>
+                    <td class="col-valor valor-negativo">{{ formatarMoeda(c.total) }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          } @else {
+            <p class="empty-info">Sem dados no período.</p>
+          }
+        </div>
+
+      </div>
+    </section>
+  }
+
+  <!-- ─── Modal: quitar lançamento ─────────────────────────────────────── -->
+  @if (lancamentoParaQuitar(); as l) {
+    <div class="modal-backdrop" (click)="lancamentoParaQuitar.set(null)"></div>
+    <section class="modal card" role="dialog" aria-modal="true" aria-label="Registrar pagamento" (click)="$event.stopPropagation()">
+      <header class="modal-head">
+        <h3>Registrar pagamento</h3>
+        <button type="button" class="modal-close" (click)="lancamentoParaQuitar.set(null)">×</button>
+      </header>
+      <div class="modal-content">
+        <dl class="quitar-dl">
+          <div><dt>Descrição</dt><dd>{{ l.descricao }}</dd></div>
+          <div><dt>Valor</dt><dd class="valor-destaque">{{ formatarMoeda(l.valor) }}</dd></div>
+          <div><dt>Vencimento</dt><dd>{{ formatarData(l.vencimento) }}</dd></div>
+        </dl>
+        <form [formGroup]="formQuitar" (ngSubmit)="confirmarQuitacao()" novalidate>
+          <label class="field">
+            <span class="field-label">Forma de pagamento</span>
+            <select formControlName="formaPagamento" [attr.aria-invalid]="formQuitar.controls.formaPagamento.invalid && formQuitar.controls.formaPagamento.touched">
+              <option value="" disabled>Selecione</option>
+              @for (fp of formasPagamento; track fp.value) {
+                <option [value]="fp.value">{{ fp.label }}</option>
+              }
+            </select>
+            @if (formQuitar.controls.formaPagamento.invalid && formQuitar.controls.formaPagamento.touched) {
+              <span class="field-error">Selecione a forma de pagamento.</span>
+            }
+          </label>
+          <div class="modal-actions">
+            <button type="button" class="btn-modal btn-secondary" (click)="lancamentoParaQuitar.set(null)">Cancelar</button>
+            <button type="submit" class="btn-modal btn-primary">✓ Confirmar pagamento</button>
+          </div>
+        </form>
+      </div>
+    </section>
+  }
+
+</div>

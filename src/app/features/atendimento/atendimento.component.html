@@ -1,0 +1,488 @@
+<div class="atendimento-page">
+
+  <!-- ─── Header ──────────────────────────────────────────────────────── -->
+  <header class="page-header">
+    <div class="brand-text">
+      <h1>Atendimento</h1>
+      <p>Registre o atendimento clínico em 4 etapas simples.</p>
+    </div>
+
+    <!-- Stepper -->
+    <nav class="stepper" aria-label="Etapas do atendimento">
+      <div class="step" [class.step--active]="etapa() === 'agenda'" [class.step--done]="etapa() === 'ficha' || etapa() === 'procedimento' || etapa() === 'finalizado'">
+        <span class="step-num">1</span>
+        <span class="step-label">Agenda</span>
+      </div>
+      <span class="step-divider" aria-hidden="true"></span>
+      <div class="step" [class.step--active]="etapa() === 'ficha'" [class.step--done]="etapa() === 'procedimento' || etapa() === 'finalizado'">
+        <span class="step-num">2</span>
+        <span class="step-label">Paciente</span>
+      </div>
+      <span class="step-divider" aria-hidden="true"></span>
+      <div class="step" [class.step--active]="etapa() === 'procedimento'" [class.step--done]="etapa() === 'finalizado'">
+        <span class="step-num">3</span>
+        <span class="step-label">Procedimento</span>
+      </div>
+      <span class="step-divider" aria-hidden="true"></span>
+      <div class="step" [class.step--active]="etapa() === 'finalizado'" [class.step--done]="false">
+        <span class="step-num">4</span>
+        <span class="step-label">Finalizar</span>
+      </div>
+    </nav>
+  </header>
+
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <!-- ETAPA 1 — AGENDA                                                    -->
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  @if (etapa() === 'agenda') {
+    <section class="etapa-section" aria-label="Etapa 1: Selecionar horário na agenda">
+
+      <div class="etapa-intro card">
+        <span class="etapa-badge">Etapa 1</span>
+        <h2>Selecione o horário na agenda</h2>
+        <p>Clique em um horário <strong>ocupado</strong> para iniciar o atendimento do paciente.</p>
+      </div>
+
+      <!-- Toolbar -->
+      <div class="toolbar card">
+        <div class="toolbar-row">
+          <label class="filter">
+            <span class="filter-label">Data</span>
+            <div class="date-stepper">
+              <button type="button" class="step-btn" (click)="shiftDate(-1)" aria-label="Dia anterior">‹</button>
+              <input type="date" [value]="selectedDate()" (change)="onDateChange($any($event.target).value)" />
+              <button type="button" class="step-btn" (click)="shiftDate(1)" aria-label="Próximo dia">›</button>
+            </div>
+          </label>
+          @if (!isDentista()) {
+            <label class="filter filter-grow">
+              <span class="filter-label">Profissional</span>
+              <select [value]="selectedProfId()" (change)="selectedProfId.set($any($event.target).value)">
+                <option value="all">Todos os profissionais</option>
+                @for (p of professionals; track p.id) {
+                  <option [value]="p.id">{{ p.name }} — {{ p.specialty }}</option>
+                }
+              </select>
+            </label>
+          } @else {
+            @let profFixo = profById(professionalIdFixo() ?? '');
+            <div class="dentista-badge" aria-label="Agenda do profissional">
+              <span class="dentista-badge-label">Sua agenda</span>
+              <span class="dentista-badge-name">{{ profFixo?.name ?? usuarioLogado() }}</span>
+              <span class="dentista-badge-spec">{{ profFixo?.specialty }}</span>
+            </div>
+          }
+        </div>
+
+        @let sum = summary();
+        <div class="stats-row">
+          <span class="stat-chip chip-livre">{{ sum.livre }} livres</span>
+          <span class="stat-chip chip-ocupado">{{ sum.ocupado }} ocupados</span>
+          <span class="stat-chip chip-indisponivel">{{ sum.indisponivel }} bloqueados</span>
+        </div>
+      </div>
+
+      <!-- Grade de horários -->
+      <div class="boards">
+        @for (row of visibleSchedules(); track row.professionalId + row.date) {
+          @let prof = profById(row.professionalId);
+          <article class="board card">
+            <header class="board-head">
+              <div>
+                <h3>{{ prof?.name ?? 'Profissional' }}</h3>
+                <p>{{ prof?.specialty }}</p>
+              </div>
+              <time [attr.datetime]="row.date">{{ formatDisplayDate(row.date) }}</time>
+            </header>
+            <div class="slot-grid" role="list">
+              @for (slot of row.slots; track slot.start) {
+                @let isAtendido = !!slot.atendimento;
+                @let isPago     = !!slot.atendimento?.pago;
+                <button
+                  type="button"
+                  class="slot"
+                  [class.slot-livre]="slot.status === 'livre' && !isAtendido"
+                  [class.slot-ocupado]="slot.status === 'ocupado' && !isAtendido"
+                  [class.slot-indisponivel]="slot.status === 'indisponivel'"
+                  [class.slot-atendido-dentista]="isAtendido && !isPago"
+                  [class.slot-pago-dentista]="isPago"
+                  [disabled]="slot.status !== 'ocupado' || isAtendido"
+                  (click)="selecionarSlot(row, slot)"
+                  [attr.aria-label]="slot.start + ' — ' + (isPago ? 'Atendido e pago' : isAtendido ? 'Atendido — aguarda pagamento' : slot.status === 'ocupado' ? 'Iniciar atendimento de ' + slot.patientName : slot.status)"
+                  role="listitem"
+                >
+                  <span class="slot-time">{{ slot.start }} – {{ slot.end }}</span>
+                  @if (isPago) {
+                    <span class="slot-meta">{{ slot.patientName ?? slot.atendimento?.paciente }}</span>
+                    <span class="slot-tag-pago-dentista">✓ Atendido e pago</span>
+                  } @else if (isAtendido) {
+                    <span class="slot-meta">{{ slot.patientName ?? slot.atendimento?.paciente }}</span>
+                    <span class="slot-tag-atendido-dentista">✓ Atendido</span>
+                  } @else if (slot.status === 'ocupado') {
+                    <span class="slot-meta">{{ slot.patientName }}</span>
+                    <span class="slot-cta">Iniciar atendimento →</span>
+                  } @else if (slot.status === 'livre') {
+                    <span class="slot-meta">Disponível</span>
+                  } @else {
+                    <span class="slot-meta">Indisponível</span>
+                  }
+                </button>
+              }
+            </div>
+          </article>
+        } @empty {
+          <div class="empty card">
+            <p>Nenhum horário encontrado para os filtros selecionados.</p>
+          </div>
+        }
+      </div>
+    </section>
+  }
+
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <!-- ETAPA 2 — FICHA DO PACIENTE                                         -->
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  @if (etapa() === 'ficha') {
+    @let ag = agendamentoSelecionado();
+    <section class="etapa-section" aria-label="Etapa 2: Ficha do paciente">
+
+      <div class="etapa-intro card">
+        <span class="etapa-badge">Etapa 2</span>
+        <h2>Confirme o paciente</h2>
+        @if (ag) {
+          <p>
+            Horário selecionado: <strong>{{ ag.slot.start }}</strong> com
+            <strong>{{ profById(ag.professionalId)?.name }}</strong> em
+            <strong>{{ formatarData(ag.date) }}</strong>
+          </p>
+        }
+      </div>
+
+      <div class="ficha-layout">
+
+        <!-- Busca e seleção de paciente -->
+        <div class="card paciente-busca">
+          <h3>Selecionar paciente</h3>
+          <label class="field">
+            <span class="field-label">Buscar por nome ou CPF</span>
+            <input
+              type="text"
+              [value]="buscaPaciente()"
+              (input)="buscaPaciente.set($any($event.target).value)"
+              placeholder="Digite para filtrar..."
+              aria-label="Buscar paciente"
+            />
+          </label>
+
+          <div class="paciente-lista" role="listbox" aria-label="Lista de pacientes">
+            @for (p of pacientesFiltrados(); track p.id) {
+              <button
+                type="button"
+                class="paciente-item"
+                [class.paciente-item--selected]="pacienteSelecionado()?.id === p.id"
+                (click)="selecionarPaciente(p)"
+                role="option"
+                [attr.aria-selected]="pacienteSelecionado()?.id === p.id"
+              >
+                <span class="paciente-avatar">{{ p.nome.charAt(0).toUpperCase() }}</span>
+                <div class="paciente-info">
+                  <span class="paciente-nome">{{ p.nome }}</span>
+                  <span class="paciente-meta">{{ calcularIdade(p.dataNascimento) }} anos · {{ p.cpf }}</span>
+                </div>
+                @if (pacienteSelecionado()?.id === p.id) {
+                  <span class="check-icon" aria-hidden="true">✓</span>
+                }
+              </button>
+            } @empty {
+              <p class="empty-info">Nenhum paciente encontrado.</p>
+            }
+          </div>
+        </div>
+
+        <!-- Ficha resumida do paciente selecionado -->
+        @if (pacienteSelecionado(); as p) {
+          <div class="card ficha-resumo">
+            <div class="ficha-resumo-header">
+              <div class="avatar">{{ p.nome.charAt(0).toUpperCase() }}</div>
+              <div>
+                <h3>{{ p.nome }}</h3>
+                <p>{{ calcularIdade(p.dataNascimento) }} anos · {{ p.tipoSanguineo }}</p>
+              </div>
+            </div>
+
+            <dl class="data-list">
+              <div><dt>CPF</dt><dd class="mono">{{ p.cpf }}</dd></div>
+              <div><dt>Telefone</dt><dd>{{ p.telefone }}</dd></div>
+              <div><dt>E-mail</dt><dd>{{ p.email || '—' }}</dd></div>
+              <div><dt>Último atendimento</dt>
+                <dd>
+                  @if (p.historico.length > 0) {
+                    {{ formatarData(p.historico[p.historico.length - 1].data) }}
+                  } @else {
+                    Primeiro atendimento
+                  }
+                </dd>
+              </div>
+            </dl>
+
+            <!-- Alertas de anamnese -->
+            @if (p.anamnese.temAlergiaMedicamento) {
+              <div class="alerta-box">⚠️ <strong>Alergia:</strong> {{ p.anamnese.alergiaMedicamentoDesc }}</div>
+            }
+            @if (p.anamnese.usaMedicamentoContinuo) {
+              <div class="info-box">💊 <strong>Medicamento contínuo:</strong> {{ p.anamnese.medicamentoContinuoDesc }}</div>
+            }
+            @if (p.anamnese.temHipertensao) {
+              <div class="alerta-box">⚠️ <strong>Hipertensão arterial</strong></div>
+            }
+            @if (p.anamnese.temDiabetes) {
+              <div class="alerta-box">⚠️ <strong>Diabetes</strong></div>
+            }
+            @if (p.anamnese.temCoagulopatia) {
+              <div class="alerta-box">⚠️ <strong>Coagulopatia</strong></div>
+            }
+
+            <!-- Histórico recente -->
+            @if (p.historico.length > 0) {
+              <div class="historico-recente">
+                <h4>Últimos atendimentos</h4>
+                @for (h of p.historico.slice(-3).reverse(); track h.id) {
+                  <div class="historico-item">
+                    <span class="historico-data">{{ formatarData(h.data) }}</span>
+                    <span class="historico-proc">{{ h.procedimento }}</span>
+                    <span class="historico-valor">{{ formatarMoeda(h.valor) }}</span>
+                  </div>
+                }
+              </div>
+            }
+
+            <button type="button" class="btn-link" (click)="irParaFicha()">
+              Ver ficha completa →
+            </button>
+          </div>
+        } @else {
+          <div class="card ficha-vazia">
+            <span class="ficha-vazia-icon" aria-hidden="true">👤</span>
+            <p>Selecione um paciente ao lado para ver sua ficha.</p>
+          </div>
+        }
+      </div>
+
+      <div class="etapa-actions">
+        <button type="button" class="btn btn-secondary" (click)="voltarEtapa()">← Voltar</button>
+        <button
+          type="button"
+          class="btn btn-primary"
+          [disabled]="!pacienteSelecionado()"
+          (click)="confirmarPaciente()"
+        >
+          Confirmar paciente →
+        </button>
+      </div>
+    </section>
+  }
+
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <!-- ETAPA 3 — PROCEDIMENTO                                              -->
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  @if (etapa() === 'procedimento') {
+    @let ag = agendamentoSelecionado();
+    @let pac = pacienteSelecionado();
+    <section class="etapa-section" aria-label="Etapa 3: Informar procedimento">
+
+      <div class="etapa-intro card">
+        <span class="etapa-badge">Etapa 3</span>
+        <h2>Informe o procedimento realizado</h2>
+        @if (ag && pac) {
+          <p>
+            Paciente: <strong>{{ pac.nome }}</strong> ·
+            {{ ag.slot.start }} com <strong>{{ profById(ag.professionalId)?.name }}</strong>
+          </p>
+        }
+      </div>
+
+      <div class="proc-layout">
+        <form class="card form-card" [formGroup]="form" (ngSubmit)="finalizarAtendimento()" novalidate>
+          <h3>Dados do atendimento</h3>
+
+          <div class="form-grid">
+            <label class="field field-span">
+              <span class="field-label">Procedimento realizado</span>
+              <select
+                formControlName="procedimentoId"
+                (change)="aoEscolherProcedimento()"
+                [attr.aria-invalid]="form.controls.procedimentoId.invalid && form.controls.procedimentoId.touched"
+              >
+                <option value="" disabled>Selecione o procedimento</option>
+                @for (pr of procedimentosMock; track pr.id) {
+                  <option [value]="pr.id">{{ pr.nome }}</option>
+                }
+              </select>
+              @if (form.controls.procedimentoId.invalid && form.controls.procedimentoId.touched) {
+                <span class="field-error">Selecione o procedimento realizado.</span>
+              }
+            </label>
+
+            <label class="field">
+              <span class="field-label">Valor cobrado (R$)</span>
+              <input
+                type="number"
+                formControlName="valor"
+                min="0.01"
+                step="0.01"
+                inputmode="decimal"
+                [attr.aria-invalid]="form.controls.valor.invalid && form.controls.valor.touched"
+              />
+              @if (form.controls.valor.invalid && form.controls.valor.touched) {
+                <span class="field-error">Informe um valor maior que zero.</span>
+              }
+            </label>
+
+            <label class="field">
+              <span class="field-label">Dentes tratados (opcional)</span>
+              <input
+                type="text"
+                formControlName="dentes"
+                placeholder="Ex.: 11, 12, 21"
+                aria-describedby="dentes-hint"
+              />
+              <span class="field-hint" id="dentes-hint">Numeração FDI separada por vírgula</span>
+            </label>
+
+            <label class="field field-span">
+              <span class="field-label">Observações clínicas</span>
+              <textarea
+                formControlName="observacoes"
+                rows="4"
+                placeholder="Descreva o procedimento, intercorrências, orientações ao paciente..."
+              ></textarea>
+            </label>
+
+            <label class="field field-checkbox">
+              <input type="checkbox" formControlName="retorno" id="retorno" />
+              <span>Paciente precisa de retorno</span>
+            </label>
+          </div>
+
+          <div class="etapa-actions">
+            <button type="button" class="btn btn-secondary" (click)="voltarEtapa()">← Voltar</button>
+            <button type="submit" class="btn btn-primary btn-finalizar">
+              ✓ Finalizar atendimento
+            </button>
+          </div>
+        </form>
+
+        <!-- Resumo lateral -->
+        @if (pac) {
+          <aside class="card resumo-lateral" aria-label="Resumo do atendimento">
+            <h3>Resumo</h3>
+            <dl class="resumo-dl">
+              <div>
+                <dt>Paciente</dt>
+                <dd>{{ pac.nome }}</dd>
+              </div>
+              <div>
+                <dt>Profissional</dt>
+                <dd>{{ ag ? profById(ag.professionalId)?.name : '—' }}</dd>
+              </div>
+              <div>
+                <dt>Data</dt>
+                <dd>{{ ag ? formatarData(ag.date) : '—' }}</dd>
+              </div>
+              <div>
+                <dt>Horário</dt>
+                <dd>{{ ag?.slot?.start ?? '—' }}</dd>
+              </div>
+              @if (form.controls.procedimentoId.value) {
+                <div>
+                  <dt>Procedimento</dt>
+                  <dd>{{ nomeProcedimento(form.controls.procedimentoId.value) }}</dd>
+                </div>
+              }
+              <div>
+                <dt>Valor</dt>
+                <dd class="valor-destaque">{{ formatarMoeda(form.controls.valor.value) }}</dd>
+              </div>
+            </dl>
+
+            @if (pac.anamnese.temAlergiaMedicamento) {
+              <div class="alerta-box">⚠️ Alergia: {{ pac.anamnese.alergiaMedicamentoDesc }}</div>
+            }
+            @if (pac.anamnese.usaMedicamentoContinuo) {
+              <div class="info-box">💊 {{ pac.anamnese.medicamentoContinuoDesc }}</div>
+            }
+          </aside>
+        }
+      </div>
+    </section>
+  }
+
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <!-- ETAPA 4 — FINALIZADO                                                -->
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  @if (etapa() === 'finalizado') {
+    @let fin = atendimentoFinalizado();
+    <section class="etapa-section etapa-finalizado" aria-label="Atendimento finalizado">
+      <div class="card finalizado-card">
+        <div class="finalizado-icon" aria-hidden="true">✓</div>
+        <h2>Atendimento finalizado!</h2>
+        <p>O registro foi salvo no histórico clínico do paciente.</p>
+
+        @if (fin) {
+          <div class="finalizado-resumo">
+            <div class="resumo-row">
+              <span class="resumo-label">Paciente</span>
+              <span class="resumo-value">{{ fin.paciente }}</span>
+            </div>
+            <div class="resumo-row">
+              <span class="resumo-label">Procedimento</span>
+              <span class="resumo-value">{{ fin.procedimento }}</span>
+            </div>
+            <div class="resumo-row">
+              <span class="resumo-label">Profissional</span>
+              <span class="resumo-value">{{ fin.profissional }}</span>
+            </div>
+            <div class="resumo-row">
+              <span class="resumo-label">Data / Hora</span>
+              <span class="resumo-value">{{ formatarData(fin.data) }} às {{ fin.hora }}</span>
+            </div>
+            <div class="resumo-row">
+              <span class="resumo-label">Valor</span>
+              <span class="resumo-value valor-destaque">{{ formatarMoeda(fin.valor) }}</span>
+            </div>
+            @if (fin.dentes) {
+              <div class="resumo-row">
+                <span class="resumo-label">Dentes</span>
+                <span class="resumo-value">{{ fin.dentes }}</span>
+              </div>
+            }
+            @if (fin.observacoes) {
+              <div class="resumo-row resumo-row--full">
+                <span class="resumo-label">Observações</span>
+                <span class="resumo-value obs-text">{{ fin.observacoes }}</span>
+              </div>
+            }
+            @if (fin.retorno) {
+              <div class="retorno-aviso">
+                📅 Paciente necessita de retorno — agende uma nova consulta.
+              </div>
+            }
+          </div>
+        }
+
+        <div class="finalizado-actions">
+          <button type="button" class="btn btn-secondary" (click)="irParaAgenda()">
+            Ver agenda
+          </button>
+          <button type="button" class="btn btn-secondary" (click)="irParaFicha()">
+            Ver ficha do paciente
+          </button>
+          <button type="button" class="btn btn-primary" (click)="novoAtendimento()">
+            + Novo atendimento
+          </button>
+        </div>
+      </div>
+    </section>
+  }
+
+</div>

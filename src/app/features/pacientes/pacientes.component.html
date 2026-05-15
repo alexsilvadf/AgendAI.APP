@@ -1,0 +1,370 @@
+<div class="pacientes-page">
+
+  <header class="page-header">
+    <div class="brand-text">
+      <h1>Pacientes</h1>
+      <p>Cadastre e gerencie os pacientes da clínica, histórico e ficha de saúde.</p>
+    </div>
+  </header>
+
+  @if (mensagem(); as msg) {
+    <div class="alert" [class.alert-success]="msg.tipo === 'sucesso'" [class.alert-error]="msg.tipo === 'erro'" role="alert">
+      {{ msg.texto }}
+    </div>
+  }
+
+  <!-- Resumo -->
+  @let sum = resumo();
+  <section class="stats" aria-label="Resumo">
+    <article class="stat card">
+      <span class="stat-value">{{ sum.total }}</span>
+      <span class="stat-label">Total de pacientes</span>
+    </article>
+    <article class="stat card">
+      <span class="stat-value teal">{{ sum.ativos }}</span>
+      <span class="stat-label">Ativos</span>
+    </article>
+  </section>
+
+  <div class="layout">
+
+    <!-- ── Formulário ─────────────────────────────────────────────────── -->
+    <section class="form-card card" aria-label="Formulário de paciente">
+      <h2>{{ editandoId() ? 'Editar paciente' : 'Novo paciente' }}</h2>
+
+      <!-- Abas -->
+      <div class="tabs" role="tablist">
+        <button
+          type="button" role="tab"
+          class="tab" [class.tab--active]="abaAtiva() === 'dados'"
+          (click)="irParaAba('dados')"
+          [attr.aria-selected]="abaAtiva() === 'dados'"
+        >Dados pessoais</button>
+        <button
+          type="button" role="tab"
+          class="tab" [class.tab--active]="abaAtiva() === 'anamnese'"
+          (click)="irParaAba('anamnese')"
+          [attr.aria-selected]="abaAtiva() === 'anamnese'"
+        >Anamnese</button>
+      </div>
+
+      <!-- Aba: Dados pessoais -->
+      @if (abaAtiva() === 'dados') {
+        <form [formGroup]="form" (ngSubmit)="salvar()" novalidate>
+          <fieldset class="fieldset">
+            <legend>Identificação</legend>
+            <div class="form-grid">
+              <label class="field field-span">
+                <span class="field-label">Nome completo *</span>
+                <input type="text" formControlName="nome" placeholder="Nome do paciente"
+                  [attr.aria-invalid]="form.controls.nome.invalid && form.controls.nome.touched" />
+                @if (form.controls.nome.invalid && form.controls.nome.touched) {
+                  <span class="field-error">Informe o nome com pelo menos 3 caracteres.</span>
+                }
+              </label>
+
+              <label class="field">
+                <span class="field-label">CPF *</span>
+                <input type="text" formControlName="cpf" placeholder="000.000.000-00"
+                  inputmode="numeric" maxlength="14"
+                  (input)="mascaraCpf($event)"
+                  [attr.aria-invalid]="form.controls.cpf.invalid && form.controls.cpf.touched" />
+                @if (form.controls.cpf.invalid && form.controls.cpf.touched) {
+                  <span class="field-error">CPF inválido. Use o formato 000.000.000-00.</span>
+                }
+              </label>
+
+              <label class="field">
+                <span class="field-label">Data de nascimento *</span>
+                <input type="date" formControlName="dataNascimento"
+                  [attr.aria-invalid]="form.controls.dataNascimento.invalid && form.controls.dataNascimento.touched" />
+                @if (form.controls.dataNascimento.invalid && form.controls.dataNascimento.touched) {
+                  <span class="field-error">Informe a data de nascimento.</span>
+                }
+              </label>
+
+              <label class="field">
+                <span class="field-label">Sexo</span>
+                <select formControlName="sexo">
+                  @for (s of sexos; track s) {
+                    <option [value]="s">{{ sexoLabels[s] }}</option>
+                  }
+                </select>
+              </label>
+
+              <label class="field">
+                <span class="field-label">Estado civil</span>
+                <select formControlName="estadoCivil">
+                  @for (e of estadosCivis; track e) {
+                    <option [value]="e">{{ estadoCivilLabels[e] }}</option>
+                  }
+                </select>
+              </label>
+
+              <label class="field">
+                <span class="field-label">Tipo sanguíneo</span>
+                <select formControlName="tipoSanguineo">
+                  @for (t of tipoSanguineo; track t) {
+                    <option [value]="t">{{ t === 'nao_informado' ? 'Não informado' : t }}</option>
+                  }
+                </select>
+              </label>
+            </div>
+          </fieldset>
+
+          <fieldset class="fieldset">
+            <legend>Contato</legend>
+            <div class="form-grid">
+              <label class="field">
+                <span class="field-label">Telefone *</span>
+                <input type="tel" formControlName="telefone" placeholder="(00) 00000-0000"
+                  inputmode="numeric" maxlength="15"
+                  (input)="mascaraTelefone($event)"
+                  [attr.aria-invalid]="form.controls.telefone.invalid && form.controls.telefone.touched" />
+                @if (form.controls.telefone.invalid && form.controls.telefone.touched) {
+                  <span class="field-error">Informe um telefone válido.</span>
+                }
+              </label>
+
+              <label class="field">
+                <span class="field-label">E-mail</span>
+                <input type="email" formControlName="email" placeholder="email@exemplo.com"
+                  [attr.aria-invalid]="form.controls.email.invalid && form.controls.email.touched" />
+                @if (form.controls.email.invalid && form.controls.email.touched) {
+                  <span class="field-error">E-mail inválido.</span>
+                }
+              </label>
+            </div>
+          </fieldset>
+
+          <fieldset class="fieldset">
+            <legend>Endereço</legend>
+            <div class="form-grid">
+              <label class="field">
+                <span class="field-label">CEP</span>
+                <input type="text" formControlName="cep" placeholder="00000-000" maxlength="9" inputmode="numeric" />
+              </label>
+
+              <label class="field field-span-2">
+                <span class="field-label">Logradouro</span>
+                <input type="text" formControlName="logradouro" placeholder="Rua, Av., etc." />
+              </label>
+
+              <label class="field">
+                <span class="field-label">Número</span>
+                <input type="text" formControlName="numero" placeholder="Nº" />
+              </label>
+
+              <label class="field">
+                <span class="field-label">Complemento</span>
+                <input type="text" formControlName="complemento" placeholder="Apto, Bloco…" />
+              </label>
+
+              <label class="field">
+                <span class="field-label">Bairro</span>
+                <input type="text" formControlName="bairro" />
+              </label>
+
+              <label class="field">
+                <span class="field-label">Cidade</span>
+                <input type="text" formControlName="cidade" />
+              </label>
+
+              <label class="field">
+                <span class="field-label">UF</span>
+                <select formControlName="uf">
+                  @for (uf of ufs; track uf) {
+                    <option [value]="uf">{{ uf }}</option>
+                  }
+                </select>
+              </label>
+            </div>
+          </fieldset>
+
+          <label class="field field-checkbox">
+            <input type="checkbox" formControlName="ativo" />
+            <span>Paciente ativo</span>
+          </label>
+
+          <div class="form-actions">
+            @if (editandoId()) {
+              <button type="button" class="btn btn-secondary" (click)="cancelarEdicao()">Cancelar</button>
+            }
+            <button type="button" class="btn btn-outline" (click)="irParaAba('anamnese')">
+              Próximo: Anamnese →
+            </button>
+            <button type="submit" class="btn btn-primary">
+              {{ editandoId() ? 'Salvar alterações' : 'Cadastrar paciente' }}
+            </button>
+          </div>
+        </form>
+      }
+
+      <!-- Aba: Anamnese -->
+      @if (abaAtiva() === 'anamnese') {
+        <form [formGroup]="formAnamnese" (ngSubmit)="salvar()" novalidate>
+          <fieldset class="fieldset">
+            <legend>Condições de saúde</legend>
+            <div class="anamnese-grid">
+              <label class="check-field">
+                <input type="checkbox" formControlName="temDoencaCardiaca" />
+                <span>Doença cardíaca</span>
+              </label>
+              <label class="check-field">
+                <input type="checkbox" formControlName="temDiabetes" />
+                <span>Diabetes</span>
+              </label>
+              <label class="check-field">
+                <input type="checkbox" formControlName="temHipertensao" />
+                <span>Hipertensão</span>
+              </label>
+              <label class="check-field">
+                <input type="checkbox" formControlName="temCoagulopatia" />
+                <span>Coagulopatia / problema de coagulação</span>
+              </label>
+              <label class="check-field">
+                <input type="checkbox" formControlName="estaGravida" />
+                <span>Gestante</span>
+              </label>
+              <label class="check-field">
+                <input type="checkbox" formControlName="fumante" />
+                <span>Fumante</span>
+              </label>
+            </div>
+          </fieldset>
+
+          <fieldset class="fieldset">
+            <legend>Alergias e medicamentos</legend>
+            <div class="form-grid">
+              <label class="check-field field-span">
+                <input type="checkbox" formControlName="temAlergiaMedicamento" />
+                <span>Alergia a medicamento</span>
+              </label>
+              @if (formAnamnese.controls.temAlergiaMedicamento.value) {
+                <label class="field field-span">
+                  <span class="field-label">Qual(is) medicamento(s)?</span>
+                  <input type="text" formControlName="alergiaMedicamentoDesc" placeholder="Ex.: Dipirona, Penicilina" />
+                </label>
+              }
+
+              <label class="check-field field-span">
+                <input type="checkbox" formControlName="temAlergiaMaterial" />
+                <span>Alergia a material (látex, metal, etc.)</span>
+              </label>
+              @if (formAnamnese.controls.temAlergiaMaterial.value) {
+                <label class="field field-span">
+                  <span class="field-label">Qual(is) material(is)?</span>
+                  <input type="text" formControlName="alergiaMaterialDesc" placeholder="Ex.: Látex" />
+                </label>
+              }
+
+              <label class="check-field field-span">
+                <input type="checkbox" formControlName="usaMedicamentoContinuo" />
+                <span>Usa medicamento de uso contínuo</span>
+              </label>
+              @if (formAnamnese.controls.usaMedicamentoContinuo.value) {
+                <label class="field field-span">
+                  <span class="field-label">Qual(is) medicamento(s)?</span>
+                  <input type="text" formControlName="medicamentoContinuoDesc" placeholder="Ex.: Losartana 50mg" />
+                </label>
+              }
+            </div>
+          </fieldset>
+
+          <fieldset class="fieldset">
+            <legend>Observações gerais</legend>
+            <label class="field">
+              <span class="field-label">Observações</span>
+              <textarea formControlName="observacoesGerais" rows="3"
+                placeholder="Informações adicionais relevantes para o atendimento…"></textarea>
+            </label>
+          </fieldset>
+
+          <div class="form-actions">
+            <button type="button" class="btn btn-secondary" (click)="irParaAba('dados')">
+              ← Voltar
+            </button>
+            @if (editandoId()) {
+              <button type="button" class="btn btn-secondary" (click)="cancelarEdicao()">Cancelar</button>
+            }
+            <button type="submit" class="btn btn-primary">
+              {{ editandoId() ? 'Salvar alterações' : 'Cadastrar paciente' }}
+            </button>
+          </div>
+        </form>
+      }
+    </section>
+
+    <!-- ── Listagem ────────────────────────────────────────────────────── -->
+    <section class="list-card card" aria-label="Lista de pacientes">
+      <header class="list-head">
+        <h2>Pacientes cadastrados</h2>
+        <p>{{ resumo().total }} total · {{ resumo().ativos }} ativos</p>
+      </header>
+
+      <div class="filters">
+        <label class="field">
+          <span class="field-label">Buscar</span>
+          <input type="text" [value]="filtroNome()"
+            (input)="onFiltroNome($any($event.target).value)"
+            placeholder="Nome, CPF ou telefone…" />
+        </label>
+        <label class="field">
+          <span class="field-label">Status</span>
+          <select [value]="filtroAtivo()" (change)="onFiltroAtivo($any($event.target).value)">
+            <option value="todos">Todos</option>
+            <option value="ativo">Ativos</option>
+            <option value="inativo">Inativos</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Nome</th>
+              <th>CPF</th>
+              <th>Idade</th>
+              <th>Telefone</th>
+              <th>Status</th>
+              <th>Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (p of listaFiltrada(); track p.id) {
+              <tr [class.row-inativo]="!p.ativo">
+                <td class="nome-cell">
+                  <span class="nome">{{ p.nome }}</span>
+                  @if (p.anamnese.temAlergiaMedicamento || p.anamnese.temAlergiaMaterial) {
+                    <span class="alerta-pill" title="Possui alergias registradas">⚠️ Alergia</span>
+                  }
+                </td>
+                <td class="mono">{{ p.cpf }}</td>
+                <td>{{ calcularIdade(p.dataNascimento) }} anos</td>
+                <td>{{ p.telefone }}</td>
+                <td>
+                  <span class="status-pill" [class.inativo]="!p.ativo">
+                    {{ p.ativo ? 'Ativo' : 'Inativo' }}
+                  </span>
+                </td>
+                <td class="actions">
+                  <button type="button" class="table-btn" (click)="verFicha(p.id)">Ficha</button>
+                  <button type="button" class="table-btn" (click)="editar(p)">Editar</button>
+                  <button type="button" class="table-btn warn" (click)="alternarAtivo(p.id)">
+                    {{ p.ativo ? 'Inativar' : 'Ativar' }}
+                  </button>
+                </td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="6" class="empty-row">Nenhum paciente encontrado.</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+  </div>
+</div>
